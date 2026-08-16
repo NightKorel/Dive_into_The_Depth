@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'V0.06'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
+const VERSION = 'v0.7.0'; // 語意化版本 主.次.修：改玩法→次+1(修歸零)、小修→修+1；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
@@ -297,7 +297,7 @@ function attack(){
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
     // 洞察：只看下一回合波動、不疊加（波動牌庫小、看太多回會太強）
     if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 2;
-    shake(crit || isFull); flashEnemy();
+    flashEnemy(); // 打怪：只有敵人抖（flashEnemy 本身含位移），不震整個畫面
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
     if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
@@ -339,7 +339,7 @@ function enemyTurn(def){
       const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
       log(`淵蟲${label} ${raw}${blocked?`（減免 ${blocked}）`:''} → 受到 <b>${dmg}</b>`);
     });
-    if(taken > 0) shake(anyHeavy);
+    if(taken > 0) shakeEl('teamArea', anyHeavy); // 被打：只震我方血條區
     if(taken >= TEAM_HP_MAX * 0.25) redVignette();
     render();
     if(teamHp <= 0){ finish(false); return; }
@@ -526,10 +526,11 @@ function floatNum(v, cls, target){
   d.style.left = (baseX - 8 + Math.random()*16) + '%';
   layer.appendChild(d); setTimeout(()=>d.remove(), 1150);
 }
-function shake(big){
-  const g = document.getElementById('game'); const cls = big ? 'shakeB' : 'shakeS';
+// 局部震動：只震指定那一區（不震整個畫面）
+function shakeEl(id, big){
+  const g = document.getElementById(id); if(!g) return; const cls = big ? 'shakeB' : 'shakeS';
   g.classList.remove('shakeS','shakeB'); void g.offsetWidth; g.classList.add(cls);
-  setTimeout(()=> g.classList.remove(cls), 520);
+  setTimeout(()=> g.classList.remove(cls), 480);
 }
 function flashEnemy(){
   const e = document.getElementById('enemyArea');

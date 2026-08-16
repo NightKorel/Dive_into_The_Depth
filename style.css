@@ -73,9 +73,9 @@ body {
 #burst.go { animation: goldBurst .5s ease-out; }
 @keyframes goldBurst { 0%{opacity:0} 16%{opacity:1} 100%{opacity:0} }
 
-/* 螢幕震動 */
-#game.shakeS { animation: shakeS .28s; }
-#game.shakeB { animation: shakeB .5s; }
+/* 震動（局部：套在被打的那一區，不震整個畫面） */
+.shakeS { animation: shakeS .28s; }
+.shakeB { animation: shakeB .45s; }
 @keyframes shakeS { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-3px,2px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,-2px)} }
 @keyframes shakeB { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-9px,5px)} 30%{transform:translate(9px,-6px)} 50%{transform:translate(-8px,7px)} 70%{transform:translate(7px,-4px)} 90%{transform:translate(-4px,2px)} }
 
