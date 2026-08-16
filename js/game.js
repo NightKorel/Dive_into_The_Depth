@@ -445,30 +445,34 @@ function renderSeqBar(){
 }
 
 // ---- 出招帶：長按拖放換順序（滑鼠/觸控通用；單點＝移除）----
+// 全域只註冊一組 move/up/cancel 監聽（在 init 掛一次），避免每次拖動重複掛／漏移除造成累積卡頓。
 let draggingUid = null;
+let dragSession = null; // { uid, active, moved, startX, longTimer }
 function fromSeqByUid(uid){ const i = seq.findIndex(t=>t.uid===uid); if(i>=0){ hand.push(seq[i]); seq.splice(i,1); render(); } }
 function attachSeqDrag(el, tile){
   el.style.touchAction = 'none';
   el.addEventListener('pointerdown', (ev) => {
-    if(animating) return;
+    if(animating || dragSession) return; // 一次只允許一個拖動
     ev.preventDefault();
-    const startX = ev.clientX;
-    let active = false, moved = false;
-    const longTimer = setTimeout(() => { if(!active){ active = true; draggingUid = tile.uid; renderSeqBar(); } }, 160);
-    const onMove = (mv) => {
-      if(!active && Math.abs(mv.clientX - startX) > 8){ active = true; clearTimeout(longTimer); draggingUid = tile.uid; renderSeqBar(); }
-      if(active){ moved = true; reorderSeq(tile.uid, mv.clientX); }
-    };
-    const onUp = () => {
-      clearTimeout(longTimer);
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      if(active){ draggingUid = null; render(); }
-      else if(!moved){ fromSeqByUid(tile.uid); } // 純點擊＝把磚收回手牌
-    };
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
+    dragSession = { uid: tile.uid, active:false, moved:false, startX: ev.clientX };
+    dragSession.longTimer = setTimeout(() => {
+      if(dragSession && !dragSession.active){ dragSession.active = true; draggingUid = dragSession.uid; renderSeqBar(); }
+    }, 160);
   });
+}
+function onDragMove(mv){
+  if(!dragSession) return;
+  if(!dragSession.active && Math.abs(mv.clientX - dragSession.startX) > 8){
+    dragSession.active = true; clearTimeout(dragSession.longTimer); draggingUid = dragSession.uid; renderSeqBar();
+  }
+  if(dragSession.active){ dragSession.moved = true; reorderSeq(dragSession.uid, mv.clientX); }
+}
+function onDragEnd(){
+  if(!dragSession) return;
+  clearTimeout(dragSession.longTimer);
+  const s = dragSession; dragSession = null; draggingUid = null;
+  if(s.active){ render(); }
+  else if(!s.moved){ fromSeqByUid(s.uid); } // 純點擊＝把磚收回手牌
 }
 function reorderSeq(uid, clientX){
   const slots = [...document.getElementById('seqSlots').children];
@@ -526,6 +530,10 @@ function init(){
   document.getElementById('btnPair').onclick = autoPair;
   document.getElementById('btnClear').onclick = clearSeq;
   document.getElementById('btnAttack').onclick = attack;
+  // 拖放的全域監聽只掛一次（含 pointercancel，觸控被打斷也能收乾淨）
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
   buildPool();
   enemies.forEach(e => planEnemy(e));
   startTurn();
