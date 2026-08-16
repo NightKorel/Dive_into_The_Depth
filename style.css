@@ -227,8 +227,8 @@ body.eff-on .tile {
   grid-template-areas: "cnum name" "eff eff";
   column-gap: 4px; row-gap: 2px; text-align: left; justify-content: initial; align-items: center;
 }
-body.eff-on .tile .num { display: none; }
 body.eff-on .tile .who { display: none; }
-body.eff-on .tile .cnum { grid-area: cnum; display: block; font-size: 15px; line-height: 1; }
+body.eff-on .tile .cnum { display: none; }
+body.eff-on .tile .num { grid-area: cnum; display: block; font-size: 15px; line-height: 1; }
 body.eff-on .tile .nm  { grid-area: name; margin: 0; font-size: 10.5px; }
 body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; overflow: hidden; font-size: 9px; line-height: 1.18; opacity: .9; }
