@@ -291,6 +291,19 @@ body {
 .modal-close { width: 100%; padding: 9px; border: none; border-radius: 8px; background: #38466e; color: #dfe6f5; cursor: pointer; font-size: 14px; }
 .modal-close:hover { background: #45558a; }
 
+/* 卡池/棄牌：可點開看內容。span 保持同字級＝不撐大排版，只加虛線底線＋游標提示可點 */
+.pileview { cursor: pointer; border-bottom: 1px dashed rgba(159,178,214,.6); }
+.pileview:hover { color: #fff; border-bottom-color: #fff; }
+/* 打開後的磚清單 */
+.pile-count { font-size: 13px; font-weight: normal; color: #9fb0cf; }
+.pile-grid { display: flex; flex-wrap: wrap; gap: 6px; max-height: 46vh; overflow-y: auto; margin-bottom: 14px; }
+.pile-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: #eef2fb;
+  padding: 4px 9px; border-radius: 7px; background: rgba(255,255,255,.05);
+  border: 1px solid var(--hc); border-left-width: 4px; }
+.pile-chip b { font-size: 14px; color: var(--hc); filter: brightness(1.35); }
+.pile-chip i { font-size: 10.5px; color: #9fb0cf; font-style: normal; margin-left: 2px; }
+.pile-empty { color: #8090ac; font-size: 13px; text-align: center; padding: 18px 0; margin-bottom: 8px; }
+
 /* 卡牌詳細效果：OFF 維持原樣（58×58 置中）；ON 換成「左上數字＋旁名字＋下描述」的固定大卡。
    兩種模式各自尺寸鎖死、所有卡一致，不會大小不一。 */
 .tile .eff { display: none; }
