@@ -168,15 +168,17 @@ function startTurn(){
 }
 
 function toSeq(idx){
+  if(animating) return;
   const t = hand[idx];
   if(seqSum() + t.skill.num > currentCap()){ flash('容量不足'); return; }
   hand.splice(idx,1); seq.push(t); render();
 }
-function fromSeq(idx){ hand.push(seq[idx]); seq.splice(idx,1); render(); }
-function clearSeq(){ while(seq.length) hand.push(seq.pop()); render(); }
+function fromSeq(idx){ if(animating) return; hand.push(seq[idx]); seq.splice(idx,1); render(); }
+function clearSeq(){ if(animating) return; while(seq.length) hand.push(seq.pop()); render(); }
 
 // 一鍵順子：笨笨地把手牌排成一條盡量長的順子（不算最優）
 function autoStraight(){
+  if(animating) return;
   clearSeq();
   const byNum = {}; hand.forEach((t,i)=>{ (byNum[t.skill.num]=byNum[t.skill.num]||[]).push(t); });
   // 從各起點試 1..5 遞增，挑塞得進容量的一條
@@ -196,6 +198,7 @@ function autoStraight(){
 }
 // 一鍵對子：笨笨地把同號的疊在一起（塞得下就放）
 function autoPair(){
+  if(animating) return;
   clearSeq();
   const byNum = {}; hand.forEach(t=>{ (byNum[t.skill.num]=byNum[t.skill.num]||[]).push(t); });
   // 找數量最多的那個號碼優先疊
@@ -208,25 +211,36 @@ function autoPair(){
 }
 
 // ---------- 出擊 ----------
+let animating = false;
 function attack(){
-  if(over || seq.length === 0) return;
+  if(over || animating || seq.length === 0) return;
   const sc = score(seq, curCard);
   const crit = Math.random()*100 < sc.crit;
-  let total = Math.ceil(sc.preCrit * (crit?2:1)); // 零頭送玩家
-  enemy.hp = Math.max(0, enemy.hp - total);
+  const total = Math.ceil(sc.preCrit * (crit?2:1)); // 零頭送玩家
   let heal = 0; seq.forEach(t => heal += (t.skill.heal||0));
-  if(heal){ teamHp = Math.min(TEAM_HP_MAX, teamHp + heal); }
-  if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
-  floatNum(total, crit?'crit':''); if(heal) floatNum('+'+heal,'heal');
-  log(`出擊！造成 <b>${total}</b> 傷害${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}`);
-
   const def = collectDef(seq);
-  // 用掉的進棄牌堆（池子抽光才洗回）、沒用的留手上
-  seq.forEach(t => discard.push(t)); seq = [];
 
-  if(enemy.hp <= 0){ render(); finish(true); return; }
-  render();
-  setTimeout(()=> enemyTurn(def), 650);
+  // 出擊動畫：磚一塊塊亮
+  animating = true;
+  document.getElementById('btnAttack').disabled = true;
+  const els = [...document.getElementById('seqSlots').children];
+  els.forEach((el,i)=> setTimeout(()=> el.classList.add('firing'), i*110));
+  const wait = els.length*110 + 260;
+
+  setTimeout(()=>{
+    enemy.hp = Math.max(0, enemy.hp - total);
+    if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
+    if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
+    shake(crit); flashEnemy();
+    floatNum(total, crit?'crit':'');
+    if(heal) setTimeout(()=> floatNum('+'+heal,'heal'), 220);
+    log(`出擊！造成 <b>${total}</b> 傷害${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}`);
+    seq.forEach(t => discard.push(t)); seq = [];
+    animating = false;
+    render();
+    if(enemy.hp <= 0){ finish(true); return; }
+    setTimeout(()=> enemyTurn(def), 720);
+  }, wait);
 }
 
 function enemyTurn(def){
@@ -269,8 +283,8 @@ function render(){
   document.getElementById('enemyHpFill').style.width = (enemy.hp/enemy.hpMax*100)+'%';
   document.getElementById('enemyHpText').textContent = `${enemy.hp} / ${enemy.hpMax}`;
   const intentEl = document.getElementById('enemyIntent');
-  if(eNext && eNext.type==='heavy'){ intentEl.innerHTML = `⚡ <b style="color:#ff6b6b">蓄力重擊！下回合造成 ${eNext.min}~${eNext.max} 點——快防禦/治療！</b>`; }
-  else if(eNext){ intentEl.textContent = `意圖：下回合攻擊 ${eNext.min}~${eNext.max} 點`; }
+  if(eNext && eNext.type==='heavy'){ intentEl.className = 'intent heavy'; intentEl.innerHTML = `⚡ <b style="color:#ff6b6b">蓄力重擊！下回合造成 ${eNext.min}~${eNext.max} 點——快防禦/治療！</b>`; }
+  else if(eNext){ intentEl.className = 'intent'; intentEl.textContent = `意圖：下回合攻擊 ${eNext.min}~${eNext.max} 點`; }
   // 隊伍
   document.getElementById('teamHpFill').style.width = (teamHp/TEAM_HP_MAX*100)+'%';
   document.getElementById('teamHpText').textContent = `${teamHp} / ${TEAM_HP_MAX}`;
@@ -283,7 +297,23 @@ function render(){
   else fs.textContent = '';
   // 出招帶
   const sSlots = document.getElementById('seqSlots'); sSlots.innerHTML=''; sSlots.classList.add('seqbar');
-  seq.forEach((t,i)=> sSlots.appendChild(tileEl(t, ()=>fromSeq(i))));
+  // 算出哪些位置屬於順子/對子，即時高亮
+  const snums = seq.map(t=>t.skill.num);
+  const inStraight = new Set(), inPair = new Set();
+  let si = 0;
+  while(si < snums.length){
+    let run=[si], j=si+1;
+    while(j<snums.length && Math.abs(snums[j]-snums[j-1])===1 && !run.map(x=>snums[x]).includes(snums[j])){ run.push(j); j++; }
+    if(run.length>=2) run.forEach(x=>inStraight.add(x));
+    si = (j>si)?j:si+1;
+  }
+  for(let k=0;k<snums.length-1;k++) if(snums[k]===snums[k+1]){ inPair.add(k); inPair.add(k+1); }
+  seq.forEach((t,i)=>{
+    const el = tileEl(t, ()=>fromSeq(i));
+    if(inPair.has(i)) el.classList.add('inpair');
+    else if(inStraight.has(i)) el.classList.add('instraight');
+    sSlots.appendChild(el);
+  });
   document.getElementById('capText').textContent = `容量 ${seqSum()} / ${currentCap()}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
   // 手牌
   const hSlots = document.getElementById('handTiles'); hSlots.innerHTML='';
@@ -312,7 +342,18 @@ function render(){
 function floatNum(v, cls){
   const layer = document.getElementById('floatLayer');
   const d = document.createElement('div'); d.className = 'floatnum ' + (cls||''); d.textContent = v;
-  layer.appendChild(d); setTimeout(()=>d.remove(), 1000);
+  d.style.left = (45 + Math.random()*10) + '%';
+  layer.appendChild(d); setTimeout(()=>d.remove(), 1150);
+}
+function shake(big){
+  const g = document.getElementById('game'); const cls = big ? 'shakeB' : 'shakeS';
+  g.classList.remove('shakeS','shakeB'); void g.offsetWidth; g.classList.add(cls);
+  setTimeout(()=> g.classList.remove(cls), 520);
+}
+function flashEnemy(){
+  const e = document.getElementById('enemyArea');
+  e.classList.remove('hit'); void e.offsetWidth; e.classList.add('hit');
+  setTimeout(()=> e.classList.remove('hit'), 400);
 }
 let logLines = [];
 function log(html){ logLines.unshift(html); logLines = logLines.slice(0,5); document.getElementById('log').innerHTML = logLines.map(l=>'· '+l).join('<br>'); }
