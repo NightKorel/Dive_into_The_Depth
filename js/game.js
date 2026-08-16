@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.7.0'; // 語意化版本 主.次.修：改玩法→次+1(修歸零)、小修→修+1；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.0'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
