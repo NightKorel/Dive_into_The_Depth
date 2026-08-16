@@ -41,11 +41,17 @@ body {
 @keyframes allinPulse { 0%,100%{ transform: translate(-50%,-50%) scale(1); } 50%{ transform: translate(-50%,-50%) scale(1.09); } }
 .hpbar.stamina { height: 14px; }
 .hpbar.stamina span { line-height: 14px; font-size: 10px; }
+/* 預計消耗段：排好還沒出牌時，體力條右端會被抽乾的那截＝半透明輕輕閃動 */
+.stamina-ghost { position: absolute; top: 0; height: 100%; z-index: 2; display: none;
+  background: rgba(255,255,255,.45); border-left: 1px solid rgba(255,255,255,.7);
+  animation: ghostPulse 1s ease-in-out infinite; pointer-events: none; }
+.stamina-ghost.show { display: block; }
+@keyframes ghostPulse { 0%,100%{ opacity: .25; } 50%{ opacity: .7; } }
 .hpbar span { position: absolute; inset: 0; text-align: center; line-height: 22px; font-size: 12px; font-weight: bold; text-shadow: 0 1px 2px #000; }
 
 /* 敵人 */
-#enemyArea { position: relative; text-align: center; }
-#battleTier { font-size: 13px; font-weight: bold; color: #d9a5ff; letter-spacing: 2px; margin-bottom: 8px; text-shadow: 0 0 6px rgba(180,120,220,.5); }
+#enemyArea { position: relative; text-align: center; padding: 6px 12px; }
+#battleTier { font-size: 12px; font-weight: bold; color: #d9a5ff; letter-spacing: 2px; margin-bottom: 4px; text-shadow: 0 0 6px rgba(180,120,220,.5); }
 #enemyRow { display: flex; gap: 16px; justify-content: center; align-items: flex-start; }
 .enemy-card { flex: 0 1 160px; transition: transform .4s ease, opacity .4s ease, filter .4s ease; }
 .enemy-card .hpbar.enemy { height: 15px; }
@@ -56,7 +62,7 @@ body {
 @keyframes enemyDie { 0%{opacity:1} 100%{opacity:0; transform:scale(.5) translateY(18px); filter:grayscale(1) brightness(.4)} }
 @keyframes enemyEnter { 0%{transform:scale(.85)} 60%{transform:scale(1.12)} 100%{transform:scale(1.06)} }
 .enemy-name { font-size: 14px; font-weight: bold; margin-bottom: 4px; color: #f0c0c0; }
-.ecard-intent { margin-top: 6px; font-size: 12px; min-height: 32px; line-height: 1.4; }
+.ecard-intent { margin-top: 4px; font-size: 12px; min-height: 26px; line-height: 1.35; }
 .ecard-intent .i-normal { color: #ffcf87; }
 .ecard-intent .i-heavy { color: #ff8080; font-weight: bold; animation: warnPulse .8s infinite; }
 .ecard-intent .i-reson { color: #c9a0ff; font-weight: bold; animation: warnPulse 1s infinite; }
