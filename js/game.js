@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.42'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.43'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -541,15 +541,19 @@ function render(){
   document.getElementById('cardDesc').textContent = curCard.desc;
   const fs = document.getElementById('foresight');
   if(foreseeLeft > 0){
-    // 洞察：看穿接下來 foreseeLeft 回合的波動（含把共鳴污染成什麼看穿）
-    const list = [];
-    if(corruptNext) list.push(corruptNext.desc + '(污染)');
-    else {
-      const r = aliveEnemies().find(e => e.next && e.next.type === 'resonance');
-      list.push(r ? ('被污染成 ' + r.next.wave.desc) : (cardQueue[0] ? cardQueue[0].name : '平靜'));
+    // 洞察：看穿接下來 foreseeLeft 回合的波動，每格標清楚是哪一回合。
+    // 下回合(k=0)若有怪已預告「深淵共鳴」→ 那回合波動會被污染成某個負面(污染回合不抽波動牌)，直接秀出是哪個。
+    // 之後的回合順著波動牌庫 peek；用 deckPeek 只在「真的會抽牌」的回合往後移＝污染回合不佔牌、不會錯位。
+    const labels = ['下回合', '下下回合', '第三回合'];
+    const reson = aliveEnemies().find(e => e.next && e.next.type === 'resonance');
+    const parts = []; let deckPeek = 0;
+    for(let k=0; k<foreseeLeft; k++){
+      let name;
+      if(k === 0 && reson){ name = `⚠ ${reson.next.wave.name}（共鳴污染）`; } // 下回合被污染、不抽牌
+      else { const c = cardQueue[deckPeek]; name = c ? c.name : '平靜'; deckPeek++; }
+      parts.push(`${labels[k] || ('第'+(k+1)+'回合')}：${name}`);
     }
-    for(let k=1; k<foreseeLeft && k<cardQueue.length; k++) list.push(cardQueue[k].name); // 後續順著波動牌庫peek
-    fs.textContent = `🔮 洞察（可見 ${foreseeLeft} 回）：` + list.join(' → ');
+    fs.textContent = '🔮 洞察　' + parts.join('　');
   } else fs.textContent = '';
   // 手牌：照數字排序（設定可選小→大／大→小，預設小→大）。直接排 hand 陣列＝點擊的 index 仍對得上。
   hand.sort((a,b)=> settings.handSort === 'desc' ? b.skill.num - a.skill.num : a.skill.num - b.skill.num);
