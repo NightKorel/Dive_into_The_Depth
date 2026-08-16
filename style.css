@@ -62,19 +62,15 @@ body {
 /* 序列 combo 即時高亮 */
 .tile.instraight { outline: 2px solid #7fe0ff; outline-offset: 1px; box-shadow: 0 0 12px rgba(127,224,255,.6); }
 .tile.inpair { outline: 2px solid #ffb14e; outline-offset: 1px; box-shadow: 0 0 12px rgba(255,177,78,.6); }
-/* 滿順 1-2-3-4-5：金光脈動、招牌大絕 */
-.tile.fullstraight { outline: 2px solid #ffe082; outline-offset: 1px; animation: fullGlow 1s infinite; z-index: 2; }
-@keyframes fullGlow {
-  0%,100% { box-shadow: 0 0 12px #ffd54f, 0 0 20px #ffb300; filter: brightness(1.05); }
-  50%     { box-shadow: 0 0 24px #fff3c0, 0 0 42px #ffca28; filter: brightness(1.3); }
-}
-.calc .fulltag { color:#ffdf6b; font-weight:900; text-shadow:0 0 10px #ffb300, 0 0 4px #fff; margin-right:6px; }
+/* 滿順 1-2-3-4-5：招牌大絕（靜態金光，不做無限動畫＝省繪製、不卡頓） */
+.tile.fullstraight { outline: 2px solid #ffe082; outline-offset: 1px; box-shadow: 0 0 16px #ffca28, 0 0 7px #ffe082; z-index: 2; }
+.calc .fulltag { color:#ffdf6b; font-weight:900; text-shadow:0 0 8px #ffb300; margin-right:6px; }
 
-/* 滿順出擊：整片金色光爆 */
+/* 滿順出擊：金色一閃（只淡入淡出、不縮放＝輕量） */
 #burst { position: fixed; inset: 0; pointer-events: none; z-index: 48; opacity: 0;
-  background: radial-gradient(circle at 50% 42%, rgba(255,225,130,.6), rgba(255,200,60,.14) 42%, transparent 72%); }
-#burst.go { animation: goldBurst .7s ease-out; }
-@keyframes goldBurst { 0%{opacity:0; transform:scale(.7)} 18%{opacity:1} 100%{opacity:0; transform:scale(1.18)} }
+  background: radial-gradient(circle at 50% 42%, rgba(255,225,130,.5), transparent 62%); }
+#burst.go { animation: goldBurst .5s ease-out; }
+@keyframes goldBurst { 0%{opacity:0} 16%{opacity:1} 100%{opacity:0} }
 
 /* 螢幕震動 */
 #game.shakeS { animation: shakeS .28s; }

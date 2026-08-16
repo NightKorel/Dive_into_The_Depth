@@ -466,7 +466,7 @@ function redVignette(){
 function goldBurst(){
   const b = document.getElementById('burst');
   b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
-  setTimeout(()=> b.classList.remove('go'), 720);
+  setTimeout(()=> b.classList.remove('go'), 520);
 }
 let logLines = [];
 function log(html){ logLines.unshift(html); logLines = logLines.slice(0,5); document.getElementById('log').innerHTML = logLines.map(l=>'· '+l).join('<br>'); }
