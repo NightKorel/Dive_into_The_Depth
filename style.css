@@ -64,7 +64,7 @@ body {
 @keyframes enemyDie { 0%{opacity:1} 100%{opacity:0; transform:scale(.5) translateY(18px); filter:grayscale(1) brightness(.4)} }
 @keyframes enemyEnter { 0%{transform:scale(.9)} 55%{transform:scale(1.06)} 100%{transform:scale(1)} }
 .enemy-name { position: relative; font-size: 14px; font-weight: bold; margin-bottom: 4px; color: #f0c0c0; text-align: center; }
-.enemy-name .focus-arrow { position: absolute; top: 50%; right: calc(50% + 1.8em); transform: translateY(-50%); color: #ff8a8a; display: none; }
+.enemy-name .focus-arrow { position: absolute; top: 50%; right: calc(50% + 1.8em); transform: translateY(-50%); color: var(--hero-color, #E8A63C); display: none; }
 /* 目標箭頭：縮放+透明度脈動(transform/opacity＝GPU、不吃效能)＝看起來活的、可點 */
 .enemy-card.focus .enemy-name .focus-arrow { display: block; animation: arrowBeckon 1s ease-in-out infinite; }
 @keyframes arrowBeckon {
