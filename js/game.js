@@ -276,6 +276,7 @@ function enemyTurn(def){
   if(blocked > 0) floatNum('🛡 ' + (dmg===0 ? '完全擋下' : blocked), 'block', 'team');
   if(dmg > 0) setTimeout(()=> floatNum('-' + dmg, 'dmg', 'team'), blocked>0?200:0);
   if(dmg > 0) shake(heavy);
+  if(dmg >= TEAM_HP_MAX * 0.25) redVignette();
   const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
   log(`淵蟲${label} ${raw}${blocked?`（減免 ${blocked}）`:''} → 受到 <b>${dmg}</b>`);
   render();
@@ -380,6 +381,12 @@ function flashEnemy(){
   const e = document.getElementById('enemyArea');
   e.classList.remove('hit'); void e.offsetWidth; e.classList.add('hit');
   setTimeout(()=> e.classList.remove('hit'), 400);
+}
+// 單次掉血 ≥25% → 螢幕邊緣紅光一閃
+function redVignette(){
+  const v = document.getElementById('vignette');
+  v.classList.remove('flash'); void v.offsetWidth; v.classList.add('flash');
+  setTimeout(()=> v.classList.remove('flash'), 560);
 }
 let logLines = [];
 function log(html){ logLines.unshift(html); logLines = logLines.slice(0,5); document.getElementById('log').innerHTML = logLines.map(l=>'· '+l).join('<br>'); }
