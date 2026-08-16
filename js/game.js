@@ -41,7 +41,7 @@ const SKILLS = {
 // ---------- 開局四人（含二選一的預設選擇；之後可做成可調 loadout）----------
 // 代表色沿用淵1（納可指定的精確色號）：主角土金、K棕、V深藍、L森林綠。
 const HEROES = [
-  { id:'主角', tiles:['精準','格擋','重斬'], color:'#BC954E', dark:'#7a5f30' }, // 2,3,5
+  { id:'主角', tiles:['精準','格擋','重斬'], color:'#E8A63C', dark:'#9c6a1e' }, // 2,3,5（橘黃，跟K深棕區隔）
   { id:'K',   tiles:['風刃','風壓','治癒'], color:'#9C6F27', dark:'#5f4318' }, // 1,2,3
   { id:'V',   tiles:['隱忍','蓄力','刀舞'], color:'#4067A2', dark:'#26406a' }, // 3,4,5（三張不同）
   { id:'L',   tiles:['療藥','洞察','霜爆'], color:'#9EBF7B', dark:'#5f7a4a' }, // 3,4,5
@@ -67,7 +67,15 @@ const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
 let teamHp = TEAM_HP_MAX;
-let enemy = { name:'淵蟲', hpMax:55, hp:55, atkMin:4, atkMax:6 };
+let enemy = { name:'淵蟲', hpMax:55, hp:55, atkMin:4, atkMax:6, heavyMin:11, heavyMax:14, heavyEvery:3 };
+let eCount = 0, eNext = null;
+// 決定淵蟲「下一次」要做什麼（每第 heavyEvery 回合是預告重擊）
+function planEnemy(){
+  eCount++;
+  const heavy = (eCount % enemy.heavyEvery === 0);
+  eNext = heavy ? { type:'heavy', min:enemy.heavyMin, max:enemy.heavyMax }
+                : { type:'normal', min:enemy.atkMin, max:enemy.atkMax };
+}
 let cardQueue = [], curCard = null, foreseeLeft = 0;
 let uid = 0, over = false;
 
@@ -223,16 +231,18 @@ function attack(){
 
 function enemyTurn(def){
   if(over) return;
+  const mv = eNext, heavy = mv.type === 'heavy';
   const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
-  if(Math.random() > hitChance){ log('敵人攻擊 <b>落空</b>了！'); startTurn(); return; }
-  let dmg = def.minRoll ? enemy.atkMin
-          : enemy.atkMin + Math.floor(Math.random()*(enemy.atkMax-enemy.atkMin+1));
+  if(Math.random() > hitChance){ log(`敵人${heavy?'的重擊':''}攻擊 <b>落空</b>了！`); planEnemy(); startTurn(); return; }
+  let dmg = def.minRoll ? mv.min
+          : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
   const raw = dmg;
   dmg = Math.max(0, dmg - def.mitigate - def.flat);
   teamHp = Math.max(0, teamHp - dmg);
-  log(`敵人反擊 ${raw}${(def.mitigate+def.flat)?`（減免 ${def.mitigate+def.flat}）`:''} → 受到 <b>${dmg}</b>`);
+  log(`淵蟲${heavy?'<b style="color:#ff6b6b">重擊</b>':'反擊'} ${raw}${(def.mitigate+def.flat)?`（減免 ${def.mitigate+def.flat}）`:''} → 受到 <b>${dmg}</b>`);
   render();
   if(teamHp <= 0){ finish(false); return; }
+  planEnemy();
   startTurn();
 }
 
@@ -258,7 +268,9 @@ function render(){
   // 敵人
   document.getElementById('enemyHpFill').style.width = (enemy.hp/enemy.hpMax*100)+'%';
   document.getElementById('enemyHpText').textContent = `${enemy.hp} / ${enemy.hpMax}`;
-  document.getElementById('enemyIntent').textContent = `意圖：下回合攻擊 ${enemy.atkMin}~${enemy.atkMax} 點`;
+  const intentEl = document.getElementById('enemyIntent');
+  if(eNext && eNext.type==='heavy'){ intentEl.innerHTML = `⚡ <b style="color:#ff6b6b">蓄力重擊！下回合造成 ${eNext.min}~${eNext.max} 點——快防禦/治療！</b>`; }
+  else if(eNext){ intentEl.textContent = `意圖：下回合攻擊 ${eNext.min}~${eNext.max} 點`; }
   // 隊伍
   document.getElementById('teamHpFill').style.width = (teamHp/TEAM_HP_MAX*100)+'%';
   document.getElementById('teamHpText').textContent = `${teamHp} / ${TEAM_HP_MAX}`;
@@ -299,6 +311,7 @@ function init(){
   document.getElementById('btnClear').onclick = clearSeq;
   document.getElementById('btnAttack').onclick = attack;
   buildPool();
+  planEnemy();
   startTurn();
   log('潛淵深處，淵蟲擋在前方。排出你的招式吧。');
 }
