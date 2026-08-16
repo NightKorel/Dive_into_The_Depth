@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.47'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.48'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -151,7 +151,7 @@ const BATTLES = {
     makeWorm('大淵蟲', PAT_B, { hpMax:40, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
   ]},
   boss:  { tier:'👑 Boss 戰', intro:'淵蟲王從深處升起。', make:()=>[
-    makeWorm('淵蟲王', ['normal','heavy','normal','resonance','normal','heavy'],
+    makeWorm('淵蟲王', ['normal','normal','heavy','normal','resonance','normal','heavy'],
       { hpMax:110, atkMin:8, atkMax:11, heavyMin:14, heavyMax:17, resMin:5, resMax:6 }),
   ]},
 };
