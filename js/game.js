@@ -28,7 +28,7 @@ const SKILLS = {
   重斬: { name:'重斬', num:5, dmg:5, desc:'造成 5 點傷害' },
   冰封: { name:'冰封', num:2, desc:'本回合敵人骰最低傷害', eff:{ enemyMin:true } },
   療藥: { name:'療藥', num:3, heal:3, desc:'回復 3 點血量' },
-  洞察: { name:'洞察', num:4, desc:'預知下一回合波動', eff:{ foresight:true } },
+  洞察: { name:'洞察', num:4, desc:'預知接下來兩回合波動', eff:{ foresight:true } },
   霜爆: { name:'霜爆', num:5, dmg:5, desc:'造成 5 點傷害' },
   影鞭: { name:'影鞭', num:1, dmg:1, desc:'造成 1 點傷害' },
   威壓: { name:'威壓', num:2, desc:'本回合全體敵人命中 -30%', eff:{ enemyAcc:0.3 } },
@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.38'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.39'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -384,8 +384,8 @@ function attack(){
       if(e !== tgt) overflow += d;
     }
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
-    // 洞察：只看下一回合波動、不疊加（波動牌庫小、看太多回會太強）
-    if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 2;
+    // 洞察：一張看接下來兩回合波動、不疊加（設 3＝startTurn 扣 1 後穩定顯示 2 回）
+    if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
     flashEnemy(); // 打怪：只有敵人抖（flashEnemy 本身含位移），不震整個畫面
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
