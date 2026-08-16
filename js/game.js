@@ -348,7 +348,9 @@ function render(){
   // 試算
   const sc = score(seq, curCard);
   document.getElementById('calc').innerHTML = seq.length
-    ? `基礎 <b>${sc.base}</b> ＋ 順子 <b>${sc.straight}</b>${sc.buff?` ＋ 增益 <b>${sc.buff}</b>`:''}　｜　爆擊率 <b>${sc.crit}%</b>　｜　預計 <b>${sc.preCrit}</b>${sc.crit?` ~ ${sc.preCrit*2}`:''}`
+    ? `預計傷害 <b class="big">${sc.preCrit}${sc.crit?`~${sc.preCrit*2}`:''}</b>`
+      + `${sc.crit?`　爆擊率 <b>${sc.crit}%</b>`:''}`
+      + `　<span class="detail">（基礎 ${sc.base}＋順子 ${sc.straight}${sc.buff?`＋增益 ${sc.buff}`:''}）</span>`
     : '把手牌點上來排序列……';
   // 效果清單：把序列裡所有非傷害效果條列，讓玩家有感
   const def = collectDef(seq);
