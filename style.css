@@ -146,6 +146,8 @@ body {
   transition: transform .1s;
 }
 .tile:hover { transform: translateY(-3px); }
+/* 卡片上的字加一層很淡的小影子，讓白字在彩色底上更清楚（別太重＝別變醜） */
+.tile span { text-shadow: 0 1px 1.5px rgba(0,0,0,.45); }
 .tile .num { font-size: 22px; font-weight: 900; line-height: 1; }
 .tile .nm { font-size: 10px; margin-top: 2px; }
 .tile .who { font-size: 9px; opacity: .7; }
