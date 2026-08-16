@@ -210,6 +210,7 @@ function startTurn(){
   else curCard = corruptNext ? corruptNext : drawCard();
   corruptNext = null;
   if(foreseeLeft > 0) foreseeLeft--;
+  animating = false; // 新回合就緒，解鎖玩家操作
   render();
 }
 
@@ -287,7 +288,7 @@ function attack(){
     if(tgt.hp <= 0 && !tgt.dead){ tgt.dead = true; killMsg = ' <b style="color:#ff9a9a">淵蟲倒下！</b>'; }
     log(`出擊！造成 <b>${total}</b> 傷害${isFull?' <b style="color:#ffdf6b">✨滿順✨</b>':''}${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}${killMsg}`);
     seq.forEach(t => discard.push(t)); seq = [];
-    animating = false;
+    // 注意：animating 保持 true，鎖到「敵人反擊→新回合抽牌」全部跑完（在 startTurn 才解鎖），避免空檔重複出擊
     if(aliveEnemies().length === 0){ render(); finish(true); return; }
     if(tgt.dead){ advanceFocus(); log('另一隻淵蟲逼近……'); } // 無縫切換前排
     render();
@@ -436,7 +437,7 @@ function render(){
   document.getElementById('seqEff').innerHTML = seq.length
     ? (effs.length ? '出擊會：' + effs.join('　') : '<span class="noeff">（這條沒有附帶效果，純輸出）</span>')
     : '';
-  document.getElementById('btnAttack').disabled = over || seq.length===0;
+  document.getElementById('btnAttack').disabled = over || animating || seq.length===0;
 }
 function floatNum(v, cls, target){
   const layer = document.getElementById(target === 'team' ? 'teamFloat' : 'floatLayer');
