@@ -249,7 +249,7 @@ function attack(){
     if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
     shake(crit); flashEnemy();
     floatNum(total, crit?'crit':'');
-    if(heal) setTimeout(()=> floatNum('+'+heal,'heal'), 220);
+    if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
     log(`出擊！造成 <b>${total}</b> 傷害${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}`);
     seq.forEach(t => discard.push(t)); seq = [];
     animating = false;
@@ -265,14 +265,19 @@ function enemyTurn(def){
   // 深淵共鳴：污染下回合波動（這一步不看閃避，一定會發生）
   if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c9a0ff">深淵共鳴</b>！下回合波動被扭曲成【${mv.wave.desc}】`); }
   const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
-  if(Math.random() > hitChance){ log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''}攻擊 <b>落空</b>了！`); planEnemy(); startTurn(); return; }
+  if(Math.random() > hitChance){ floatNum('MISS', 'miss', 'team'); log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''}攻擊 <b>閃避</b>了！`); planEnemy(); startTurn(); return; }
   let dmg = def.minRoll ? mv.min
           : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
   const raw = dmg;
   dmg = Math.max(0, dmg - def.mitigate - def.flat);
+  const blocked = raw - dmg;
   teamHp = Math.max(0, teamHp - dmg);
+  // 我方飄字：先擋下、再受傷
+  if(blocked > 0) floatNum('🛡 ' + (dmg===0 ? '完全擋下' : blocked), 'block', 'team');
+  if(dmg > 0) setTimeout(()=> floatNum('-' + dmg, 'dmg', 'team'), blocked>0?200:0);
+  if(dmg > 0) shake(heavy);
   const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
-  log(`淵蟲${label} ${raw}${(def.mitigate+def.flat)?`（減免 ${def.mitigate+def.flat}）`:''} → 受到 <b>${dmg}</b>`);
+  log(`淵蟲${label} ${raw}${blocked?`（減免 ${blocked}）`:''} → 受到 <b>${dmg}</b>`);
   render();
   if(teamHp <= 0){ finish(false); return; }
   planEnemy();
@@ -360,10 +365,10 @@ function render(){
     : '';
   document.getElementById('btnAttack').disabled = over || seq.length===0;
 }
-function floatNum(v, cls){
-  const layer = document.getElementById('floatLayer');
+function floatNum(v, cls, target){
+  const layer = document.getElementById(target === 'team' ? 'teamFloat' : 'floatLayer');
   const d = document.createElement('div'); d.className = 'floatnum ' + (cls||''); d.textContent = v;
-  d.style.left = (45 + Math.random()*10) + '%';
+  d.style.left = (40 + Math.random()*20) + '%';
   layer.appendChild(d); setTimeout(()=>d.remove(), 1150);
 }
 function shake(big){
