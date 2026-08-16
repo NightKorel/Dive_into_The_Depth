@@ -149,7 +149,9 @@ body {
 .tile:hover { transform: translateY(-3px); }
 /* 卡片上的字加一層很淡的小影子，讓白字在彩色底上更清楚（別太重＝別變醜） */
 .tile span { text-shadow: 0 1px 1.5px rgba(0,0,0,.45); }
-.tile .num { font-size: 22px; font-weight: 900; line-height: 1; }
+/* 數字＝凸字效果：上緣一道淡高光＋下方深陰影＝看起來浮凸出來（不靠底色塊、不靠改色） */
+.tile .num { font-size: 22px; font-weight: 900; line-height: 1;
+  text-shadow: 0 -1px 0 rgba(255,255,255,.35), 0 1px 1px rgba(0,0,0,.6), 0 2px 3px rgba(0,0,0,.4); }
 .tile .nm { font-size: 10px; margin-top: 2px; }
 .tile .who { font-size: 9px; opacity: .7; }
 /* 依號碼分類上色 */
@@ -235,6 +237,9 @@ body.eff-on .tile .cnum { display: none; }
 body.eff-on .tile .num { grid-area: cnum; display: block; font-size: 15px; line-height: 1; }
 body.eff-on .tile .nm  { grid-area: name; margin: 0; font-size: 10.5px; }
 body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; overflow: hidden;
-  font-size: 9px; line-height: 1.25; opacity: .9;
+  font-size: 9px; line-height: 1.25;
   /* 斷行漂亮：strict＝標點不落行首、不硬拆「-2」「(含隊友)」；balance＝每行長度盡量均衡（不會最後一行只剩一個字） */
-  text-align: center; text-wrap: balance; line-break: strict; word-break: normal; overflow-wrap: anywhere; }
+  text-align: center; text-wrap: balance; line-break: strict; word-break: normal; overflow-wrap: anywhere;
+  color: rgba(255,255,255,.82); }
+/* 描述裡的數字(3、-2、-30%…)加粗＋純白＝一眼看到關鍵數值 */
+body.eff-on .tile .eff .dnum { font-weight: 900; color: #fff; }
