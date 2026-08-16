@@ -89,7 +89,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.21'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.22'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -125,6 +125,13 @@ let focusIdx = 0, corruptNext = null;
 function focusEnemy(){ return enemies[focusIdx]; }
 function aliveEnemies(){ return enemies.filter(e => !e.dead); }
 // 前排死了 → focus 移到下一隻活的（無縫切換）
+// 玩家點怪＝選目標（只在自己回合、目標活著才有效）。選定會記憶到戰鬥結束或再改。
+function selectTarget(idx){
+  if(animating || over) return;           // 只有自己回合(沒在跑動畫)能改
+  if(!enemies[idx] || enemies[idx].dead) return;
+  if(idx === focusIdx) return;
+  focusIdx = idx; render();
+}
 function advanceFocus(){
   for(let n=1; n<=enemies.length; n++){
     const idx = (focusIdx+n) % enemies.length;
@@ -423,12 +430,13 @@ function render(){
   const row = document.getElementById('enemyRow');
   if(row.children.length !== enemies.length){
     row.innerHTML = '';
-    enemies.forEach(()=>{
+    enemies.forEach((_, idx)=>{
       const card = document.createElement('div');
       card.className = 'enemy-card';
       card.innerHTML = `<div class="enemy-name"><span class="focus-arrow">►</span><span class="ename-txt"></span></div>`
         + `<div class="hpbar enemy"><div class="hpfill"></div><span></span></div>`
         + `<div class="ecard-intent"></div>`;
+      card.onclick = () => selectTarget(idx); // 玩家自己的回合可點怪換目標
       row.appendChild(card);
     });
   }

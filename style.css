@@ -53,7 +53,8 @@ body {
 #enemyArea { position: relative; text-align: center; padding: 6px 12px; }
 #battleTier { font-size: 12px; font-weight: bold; color: #d9a5ff; letter-spacing: 2px; margin-bottom: 4px; text-shadow: 0 0 6px rgba(180,120,220,.5); }
 #enemyRow { display: flex; gap: 16px; justify-content: center; align-items: flex-start; }
-.enemy-card { flex: 0 1 160px; transition: transform .4s ease, opacity .4s ease, filter .4s ease; }
+.enemy-card { flex: 0 1 160px; cursor: pointer; border-radius: 8px; transition: transform .4s ease, opacity .4s ease, filter .4s ease; }
+.enemy-card:hover { background: rgba(255,255,255,.05); } /* 提示可點選目標 */
 .enemy-card .hpbar.enemy { height: 15px; }
 .enemy-card .hpbar.enemy span { line-height: 15px; font-size: 10px; }
 /* 目標只用箭頭標示；非目標「不」變暗/縮小/灰階（牠一樣會攻擊）。切換時輕輕彈一下就好、結束回正常大小。 */
