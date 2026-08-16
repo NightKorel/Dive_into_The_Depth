@@ -159,7 +159,10 @@ body {
 .foresight { font-size: 11px; color: #8fa0c0; margin-top: 4px; }
 
 /* 磚塊 */
-.tilebar { display: flex; flex-wrap: wrap; gap: 6px; min-height: 62px; align-items: center; }
+.tilebar { display: flex; flex-wrap: wrap; gap: 5px; min-height: 62px; align-items: center; align-content: flex-start; }
+/* 手牌＋出招帶的磚都用同一個響應式寬度＝一排剛好 5 張、兩邊尺寸一致（出招帶仍是 flex＝可拖放）。
+   減 0.8px 是留鋪排容差，避免小數進位害它掉成一排 4 張。 */
+.tilebar .tile, body.eff-on .tilebar .tile { width: calc((100% - 20px) / 5 - 0.8px); }
 .tile {
   position: relative;
   width: 58px; height: 58px; border-radius: 8px; cursor: pointer;
@@ -175,9 +178,8 @@ body {
   text-shadow: 0 -1px 0 rgba(255,255,255,.35), 0 1px 1px rgba(0,0,0,.6), 0 2px 3px rgba(0,0,0,.4); }
 .tile .nm { font-size: 10px; margin-top: 2px; }
 .tile .who { font-size: 9px; opacity: .7; }
-/* 右上角小效果徽章：離上框/右框等距，加方形深色底＝像小旗標；絕對定位不影響排版 */
-.tile .badge { position: absolute; top: 3px; right: 3px; font-size: 10px; line-height: 1; pointer-events: none;
-  padding: 1.5px 2px; border-radius: 3px; background: rgba(0,0,0,.33); box-shadow: 0 1px 2px rgba(0,0,0,.35); }
+/* 右上角小效果徽章：離上框/右框等距、乾淨 emoji（不加底色/陰影）；絕對定位不影響排版 */
+.tile .badge { position: absolute; top: 3px; right: 3px; font-size: 11px; line-height: 1; pointer-events: none; }
 /* 依號碼分類上色 */
 .n1, .n5 { background: linear-gradient(160deg, #8a2f2f, #c04a4a); }   /* 打人 紅 */
 .n2 { background: linear-gradient(160deg, #5a3a7a, #8158b0); }       /* 減益 紫 */
