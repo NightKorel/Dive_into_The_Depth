@@ -234,4 +234,7 @@ body.eff-on .tile .who { display: none; }
 body.eff-on .tile .cnum { display: none; }
 body.eff-on .tile .num { grid-area: cnum; display: block; font-size: 15px; line-height: 1; }
 body.eff-on .tile .nm  { grid-area: name; margin: 0; font-size: 10.5px; }
-body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; overflow: hidden; font-size: 9px; line-height: 1.18; opacity: .9; }
+body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; overflow: hidden;
+  font-size: 9px; line-height: 1.25; opacity: .9;
+  /* 斷行漂亮：strict＝標點不落行首、不硬拆「-2」「(含隊友)」；balance＝每行長度盡量均衡（不會最後一行只剩一個字） */
+  text-align: center; text-wrap: balance; line-break: strict; word-break: normal; overflow-wrap: anywhere; }
