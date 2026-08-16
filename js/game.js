@@ -49,6 +49,23 @@ const HEROES = [
 ];
 const HERO_COLOR = {}; HEROES.forEach(h => HERO_COLOR[h.id] = h);
 
+// ---------- 設定（改名／改主角色／顯示卡牌詳細效果；存 localStorage） ----------
+const SETTINGS_KEY = 'yuan2_settings';
+let settings = { playerName:'主角', heroColor:'#E8A63C', showTileEff:true };
+function loadSettings(){ try{ const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); if(s && typeof s==='object') Object.assign(settings, s); }catch(e){} }
+function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
+// 主角改名：內部識別仍用 '主角'（磚的 who、顏色查表都靠它），只有「顯示」換成玩家取的名字
+function displayName(id){ return id === '主角' ? (String(settings.playerName).trim() || '主角') : id; }
+// 依主角選的色，自動算一個較深的底色（磚的漸層用）
+function darken(hex, f=0.55){
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex); if(!m) return '#333';
+  const n = parseInt(m[1],16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const d = v => Math.round(v*f).toString(16).padStart(2,'0');
+  return '#'+d(r)+d(g)+d(b);
+}
+function applyHeroColor(){ const h = HEROES[0]; h.color = settings.heroColor; h.dark = darken(settings.heroColor); }
+function applyTileEff(){ document.body.classList.toggle('eff-on', !!settings.showTileEff); }
+
 // ---------- 回合條件卡（潛淵波動）10 張 ----------
 const CARDS = [
   { name:'平靜', desc:'無加成' },
@@ -64,7 +81,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.12'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.13'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -323,7 +340,7 @@ function attack(){
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
     if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
-    if(overflow > 0) setTimeout(()=> floatNum('溢出 '+overflow, 'crit'), 260); // 溢出傷害飄字
+    if(overflow > 0) setTimeout(()=> floatNum('溢出 '+overflow, 'spill'), 300); // 溢出傷害飄字（小小的、不強調）
     let killMsg = '';
     enemies.forEach(e => { if(e.hp <= 0 && !e.dead){ e.dead = true; killMsg += ' <b style="color:#ff9a9a">淵蟲倒下！</b>'; } });
     log(`出擊！造成 <b>${total}</b> 傷害${isFull?' <b style="color:#ffdf6b">✨滿順✨</b>':''}${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${overflow?` （溢出 <b>${overflow}</b> 打到下一隻）`:''}${heal?`，回復 ${heal} 血`:''}${killMsg}`);
@@ -387,8 +404,8 @@ function tileEl(t, onClick){
   d.className = 'tile';
   const c = HERO_COLOR[t.who] || { color:'#555', dark:'#333' };
   d.style.background = `linear-gradient(160deg, ${c.dark}, ${c.color})`;
-  d.innerHTML = `<span class="num">${t.skill.num}</span><span class="nm">${t.skill.name}</span><span class="who">${t.who}</span>`;
-  d.title = `${t.skill.name}（${t.who}）：${t.skill.desc}`;
+  d.innerHTML = `<span class="num">${t.skill.num}</span><span class="nm">${t.skill.name}</span><span class="who">${displayName(t.who)}</span><span class="eff">${t.skill.desc}</span>`;
+  d.title = `${t.skill.name}（${displayName(t.who)}）：${t.skill.desc}`;
   d.onclick = onClick;
   return d;
 }
@@ -438,7 +455,7 @@ function render(){
   const canAllIn = (stamina >= STAMINA_MAX) && !over && !animating;
   allInBtn.classList.toggle('show', canAllIn);
   allInBtn.classList.toggle('active', allIn);
-  document.getElementById('heroRow').innerHTML = HEROES.map(h=>`<div class="hero" style="--hc:${h.color}"><b>${h.id}</b><span class="hnums">${h.tiles.map(t=>SKILLS[t].num).join(' ')}</span></div>`).join('');
+  document.getElementById('heroRow').innerHTML = HEROES.map(h=>`<div class="hero" style="--hc:${h.color}"><b>${displayName(h.id)}</b><span class="hnums">${h.tiles.map(t=>SKILLS[t].num).join(' ')}</span></div>`).join('');
   // 波動卡
   document.getElementById('cardArea').className = 'panel' + (curCard.neg ? ' negwave' : '');
   document.getElementById('cardName').textContent = curCard.name;
@@ -589,8 +606,35 @@ let logLines = [];
 function log(html){ logLines.unshift(html); logLines = logLines.slice(0,5); document.getElementById('log').innerHTML = logLines.map(l=>'· '+l).join('<br>'); }
 function flash(msg){ log(msg); }
 
+// ---------- 選單／設定介面 ----------
+function toggleMenu(){ document.getElementById('menuPop').classList.toggle('show'); }
+function openSettings(){
+  document.getElementById('menuPop').classList.remove('show');
+  renderSettings();
+  document.getElementById('modalMask').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
+function renderSettings(){
+  const nameEsc = String(settings.playerName).replace(/"/g,'&quot;');
+  document.getElementById('settingsModal').innerHTML =
+    `<h3>設定</h3>`
+    + `<div class="set-row"><label>主角名字</label><input type="text" id="setName" maxlength="8" value="${nameEsc}" placeholder="主角"></div>`
+    + `<div class="set-row"><label>主角代表色</label><input type="color" id="setColor" value="${settings.heroColor}"></div>`
+    + `<div class="set-row toggle" id="setEffRow"><label>顯示卡牌詳細效果</label><span class="switch ${settings.showTileEff?'on':''}">${settings.showTileEff?'開':'關'}</span></div>`
+    + `<div class="set-hint">效果字很小、顯示在每張磚下方；新手建議開著（關掉版面更簡潔，滑鼠指上去仍看得到）。</div>`
+    + `<button class="modal-close" id="setClose">關閉</button>`;
+  document.getElementById('setName').oninput = e => { settings.playerName = e.target.value; saveSettings(); render(); };
+  document.getElementById('setColor').oninput = e => { settings.heroColor = e.target.value; applyHeroColor(); saveSettings(); render(); };
+  document.getElementById('setEffRow').onclick = () => { settings.showTileEff = !settings.showTileEff; applyTileEff(); saveSettings(); renderSettings(); };
+  document.getElementById('setClose').onclick = closeModal;
+}
+
 // ---------- 啟動 ----------
 function init(){
+  loadSettings(); applyHeroColor(); applyTileEff();
+  document.getElementById('btnMenu').onclick = toggleMenu;
+  document.getElementById('menuSettings').onclick = openSettings;
+  document.getElementById('modalMask').onclick = e => { if(e.target.id === 'modalMask') closeModal(); };
   document.getElementById('btnStraight').onclick = autoStraight;
   document.getElementById('btnPair').onclick = autoPair;
   document.getElementById('btnClear').onclick = clearSeq;
