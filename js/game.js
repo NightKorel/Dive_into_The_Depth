@@ -54,10 +54,8 @@ const CARDS = [
   { name:'平靜', desc:'無加成' },
   { name:'平靜', desc:'無加成' },
   { name:'平靜', desc:'無加成' },
-  { name:'對子共鳴', desc:'爆擊率 ×2', pairMult:2 },
+  { name:'對子沸騰', desc:'爆擊率 ×2', pairMult:2 },
   { name:'順子奔流', desc:'順子加成 ×2', straightMult:2 },
-  { name:'順子湧動', desc:'順子加成 ×1.5', straightMult:1.5 },
-  { name:'對子微光', desc:'爆擊率 ×1.5', pairMult:1.5 },
   { name:'空間擴張', desc:'容量 +2', capBonus:2 },
   { name:'空間裂變', desc:'容量 +4', capBonus:4 },
 ];
