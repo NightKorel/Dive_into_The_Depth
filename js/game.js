@@ -6,7 +6,7 @@
 
    規則摘要：
    - 池子 = 場上4角色 × 每人3磚 = 12。每回合補手牌到8。用掉洗回池子、沒用留手上。
-   - 體力池（起13/回合+13/上限40、不歸零累積）＝這回合能花的「數字總和」上限；花掉＝排進出招帶的數字總和。
+   - 容量 15（每回合排列的數字總和上限，照舊每回合重置）。體力＝獨立充能條（起0/回合+13/上限40），只給 ALL IN 用：滿40可按、按下這回合容量無限、出擊後花光體力。
    - 基礎傷害 = 序列中各磚的傷害值（1磚打1、5磚打5、吸取1）加總。
    - 順子(相鄰連號不重複) 加成 = 基數3 ×(長度-1)。
    - 對子(相鄰同號) → 爆擊率，每對+15%，爆擊=總傷害×2。
@@ -64,12 +64,12 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.3.0'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
-const HAND_MAX = 8, TEAM_HP_MAX = 40;
-// 體力池：不每回合歸零，會累積。起始 0，每回合開始 +13，上限 40（＝可以「忍住攢一波、下回合爆大的」）
+const VERSION = 'v0.3.1'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
+// 體力（＝ ALL IN 的獨立充能條，跟容量分開）：起 0，每回合開始 +13，上限 40。平常只會長；只有 ALL IN 會花掉它。
 const STAMINA_MAX = 40, STAMINA_GAIN = 13;
 let stamina = 0;
-let allIn = false; // ALL IN！：體力滿時可按，這回合容量無限、出擊後清空體力
+let allIn = false; // ALL IN！：體力滿時可按，這回合容量無限、出擊後花光體力
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
 let teamHp = TEAM_HP_MAX;
@@ -133,8 +133,8 @@ function drawCard(){
   return cardQueue.shift();
 }
 
-// 這回合能花的上限＝目前體力（＋波動的臨時 ±）；ALL IN 時無限
-function currentCap(){ return allIn ? Infinity : Math.max(0, stamina + (curCard.capBonus || 0)); }
+// 每回合容量＝15（＋波動臨時 ±）；ALL IN 時無限
+function currentCap(){ return allIn ? Infinity : Math.max(0, CAP_BASE + (curCard.capBonus || 0)); }
 function seqSum(){ return seq.reduce((s,t)=> s + t.skill.num, 0); }
 
 // ---------- 計分 ----------
@@ -279,7 +279,6 @@ function attack(){
   let heal = 0; seq.forEach(t => heal += (t.skill.heal||0));
   const def = collectDef(seq);
   const isFull = !!fullStraightRun(seq.map(t=>t.skill.num)); // 滿順？
-  const spent = seqSum(); // 這回合花掉的體力
 
   // 出擊動畫：磚一塊塊亮
   animating = true;
@@ -301,7 +300,7 @@ function attack(){
   setTimeout(()=>{
    try {
     const tgt = focusEnemy();
-    stamina = allIn ? 0 : Math.max(0, stamina - spent); // ALL IN 清空體力；否則花掉花費
+    if(allIn) stamina = 0; // ALL IN 花光體力（平常出擊不動體力）
     allIn = false;
     tgt.hp = Math.max(0, tgt.hp - total);
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
@@ -466,7 +465,7 @@ function renderSeqBar(){
     attachSeqDrag(el, t);
     sSlots.appendChild(el);
   });
-  document.getElementById('capText').textContent = `花費 ${seqSum()} / ${allIn ? 'ALL IN 無限' : '可用體力 '+currentCap()}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
+  document.getElementById('capText').textContent = `花費 ${seqSum()} / ${allIn ? 'ALL IN 無限' : '容量 '+currentCap()}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
   const sc = score(seq, curCard);
   document.getElementById('calc').innerHTML = seq.length
     ? `${fullRun?'<span class="fulltag">✨ 滿順 ✨</span>':''}預計傷害 <b class="big">${sc.preCrit}${sc.crit?`~${sc.preCrit*2}`:''}</b>`
