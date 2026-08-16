@@ -26,7 +26,18 @@ body {
 
 /* 敵人 */
 #enemyArea { position: relative; text-align: center; }
-.enemy-name { font-size: 18px; font-weight: bold; margin-bottom: 6px; color: #f0c0c0; }
+#enemyRow { display: flex; gap: 16px; justify-content: center; align-items: flex-start; }
+.enemy-card { flex: 0 1 200px; transition: transform .4s ease, opacity .4s ease, filter .4s ease; }
+.enemy-card.focus { transform: scale(1.06); animation: enemyEnter .45s ease; }
+.enemy-card.sub { opacity: .62; transform: scale(.9); filter: grayscale(.4); }
+.enemy-card.dead { animation: enemyDie .6s forwards; pointer-events: none; }
+@keyframes enemyDie { 0%{opacity:1} 100%{opacity:0; transform:scale(.5) translateY(18px); filter:grayscale(1) brightness(.4)} }
+@keyframes enemyEnter { 0%{transform:scale(.85)} 60%{transform:scale(1.12)} 100%{transform:scale(1.06)} }
+.enemy-name { font-size: 17px; font-weight: bold; margin-bottom: 6px; color: #f0c0c0; }
+.ecard-intent { margin-top: 6px; font-size: 12px; min-height: 32px; line-height: 1.4; }
+.ecard-intent .i-normal { color: #ffcf87; }
+.ecard-intent .i-heavy { color: #ff8080; font-weight: bold; animation: warnPulse .8s infinite; }
+.ecard-intent .i-reson { color: #c9a0ff; font-weight: bold; animation: warnPulse 1s infinite; }
 .intent { margin-top: 6px; font-size: 13px; color: #ffcf87; }
 #floatLayer, #teamFloat { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
 #teamArea { position: relative; }

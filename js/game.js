@@ -75,20 +75,36 @@ const NEG_WAVES = [
 ];
 function pickNegWave(){ return NEG_WAVES[Math.floor(Math.random()*NEG_WAVES.length)]; }
 
-// 敵人：行動用一條會循環的 pattern（normal 普攻／heavy 預告重擊／resonance 深淵共鳴）
-let enemy = {
-  name:'淵蟲', hpMax:55, hp:55, atkMin:8, atkMax:12,   // 傷害×2（納可 playtest：怪再強一點，看看手感）
-  heavyMin:22, heavyMax:28, resMin:4, resMax:6,
-  pattern:['normal','normal','heavy','normal','resonance','normal'],
-};
-let ePatIdx = -1, eNext = null, corruptNext = null;
-// 決定淵蟲「下一次」要做什麼（照 pattern，提前預告）
-function planEnemy(){
-  ePatIdx = (ePatIdx + 1) % enemy.pattern.length;
-  const kind = enemy.pattern[ePatIdx];
-  if(kind === 'heavy') eNext = { type:'heavy', min:enemy.heavyMin, max:enemy.heavyMax };
-  else if(kind === 'resonance') eNext = { type:'resonance', min:enemy.resMin, max:enemy.resMax, wave:pickNegWave() };
-  else eNext = { type:'normal', min:enemy.atkMin, max:enemy.atkMax };
+// 敵人：一場可以有多隻，全部同時在場、都會攻擊你；單體攻擊打「前排 focus」，前排死了自動換下一隻。
+// 行動用一條會循環的 pattern（normal 普攻／heavy 預告重擊／resonance 深淵共鳴）。
+// 兩隻一起打＝傷害會疊，所以每隻比單隻弱（不是一隻硬 ×2）。
+function makeWorm(name, pattern){
+  return {
+    name, hpMax:40, hp:40, atkMin:5, atkMax:7, heavyMin:13, heavyMax:16, resMin:3, resMax:4,
+    pattern, patIdx:-1, next:null, dead:false,
+  };
+}
+let enemies = [
+  makeWorm('淵蟲', ['normal','normal','heavy','normal','resonance','normal']),
+  makeWorm('淵蟲', ['normal','resonance','normal','heavy','normal','normal']), // pattern 錯開，重擊不會同回合
+];
+let focusIdx = 0, corruptNext = null;
+function focusEnemy(){ return enemies[focusIdx]; }
+function aliveEnemies(){ return enemies.filter(e => !e.dead); }
+// 前排死了 → focus 移到下一隻活的（無縫切換）
+function advanceFocus(){
+  for(let n=1; n<=enemies.length; n++){
+    const idx = (focusIdx+n) % enemies.length;
+    if(!enemies[idx].dead){ focusIdx = idx; return; }
+  }
+}
+// 決定某隻「下一次」要做什麼（照 pattern，提前預告）
+function planEnemy(e){
+  e.patIdx = (e.patIdx + 1) % e.pattern.length;
+  const kind = e.pattern[e.patIdx];
+  if(kind === 'heavy') e.next = { type:'heavy', min:e.heavyMin, max:e.heavyMax };
+  else if(kind === 'resonance') e.next = { type:'resonance', min:e.resMin, max:e.resMax, wave:pickNegWave() };
+  else e.next = { type:'normal', min:e.atkMin, max:e.atkMax };
 }
 let cardQueue = [], curCard = null, foreseeLeft = 0;
 let uid = 0, over = false;
@@ -259,52 +275,58 @@ function attack(){
   const wait = els.length*110 + 260;
 
   setTimeout(()=>{
-    enemy.hp = Math.max(0, enemy.hp - total);
+    const tgt = focusEnemy();
+    tgt.hp = Math.max(0, tgt.hp - total);
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
     if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
     shake(crit || isFull); flashEnemy();
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
     if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
-    log(`出擊！造成 <b>${total}</b> 傷害${isFull?' <b style="color:#ffdf6b">✨滿順✨</b>':''}${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}`);
+    let killMsg = '';
+    if(tgt.hp <= 0 && !tgt.dead){ tgt.dead = true; killMsg = ' <b style="color:#ff9a9a">淵蟲倒下！</b>'; }
+    log(`出擊！造成 <b>${total}</b> 傷害${isFull?' <b style="color:#ffdf6b">✨滿順✨</b>':''}${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}${killMsg}`);
     seq.forEach(t => discard.push(t)); seq = [];
     animating = false;
+    if(aliveEnemies().length === 0){ render(); finish(true); return; }
+    if(tgt.dead){ advanceFocus(); log('另一隻淵蟲逼近……'); } // 無縫切換前排
     render();
-    if(enemy.hp <= 0){ finish(true); return; }
     setTimeout(()=> enemyTurn(def), 720);
   }, wait);
 }
 
+// 敵人回合：所有活著的敵人都出手（全體減傷/命中 debuff 對每一隻都作用＝全體效果有意義）
 function enemyTurn(def){
   if(over) return;
-  const mv = eNext, heavy = mv.type === 'heavy', reson = mv.type === 'resonance';
-  // 深淵共鳴：污染下回合波動（這一步不看閃避，一定會發生）
-  if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c9a0ff">深淵共鳴</b>！下回合波動被扭曲成【${mv.wave.desc}】`); }
-  const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
-  if(Math.random() > hitChance){ floatNum('MISS', 'miss', 'team'); log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''}攻擊 <b>閃避</b>了！`); planEnemy(); startTurn(); return; }
-  let dmg = def.minRoll ? mv.min
-          : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
-  const raw = dmg;
-  dmg = Math.max(0, dmg - def.mitigate - def.flat);
-  const blocked = raw - dmg;
-  teamHp = Math.max(0, teamHp - dmg);
-  // 我方飄字：先擋下、再受傷
-  if(blocked > 0) floatNum('🛡 ' + (dmg===0 ? '完全擋下' : blocked), 'block', 'team');
-  if(dmg > 0) setTimeout(()=> floatNum('-' + dmg, 'dmg', 'team'), blocked>0?200:0);
-  if(dmg > 0) shake(heavy);
-  if(dmg >= TEAM_HP_MAX * 0.25) redVignette();
-  const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
-  log(`淵蟲${label} ${raw}${blocked?`（減免 ${blocked}）`:''} → 受到 <b>${dmg}</b>`);
+  const alive = aliveEnemies();
+  let taken = 0, anyHeavy = false;
+  alive.forEach((e, i) => {
+    const mv = e.next, heavy = mv.type === 'heavy', reson = mv.type === 'resonance';
+    if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c9a0ff">深淵共鳴</b>！下回合波動被污染（用洞察才看得到內容）`); }
+    const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
+    if(Math.random() > hitChance){ setTimeout(()=> floatNum('MISS','miss','team'), i*260); log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''} <b>閃避</b>了！`); return; }
+    let dmg = def.minRoll ? mv.min : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
+    const raw = dmg;
+    dmg = Math.max(0, dmg - def.mitigate - def.flat); // 全體減傷/風壓/精準對每隻都減
+    const blocked = raw - dmg;
+    teamHp = Math.max(0, teamHp - dmg); taken += dmg; if(heavy) anyHeavy = true;
+    if(blocked > 0) setTimeout(()=> floatNum('🛡 ' + (dmg===0?'完全擋下':blocked), 'block', 'team'), i*260);
+    if(dmg > 0) setTimeout(()=> floatNum('-' + dmg, 'dmg', 'team'), i*260 + (blocked>0?180:0));
+    const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
+    log(`淵蟲${label} ${raw}${blocked?`（減免 ${blocked}）`:''} → 受到 <b>${dmg}</b>`);
+  });
+  if(taken > 0) shake(anyHeavy);
+  if(taken >= TEAM_HP_MAX * 0.25) redVignette();
   render();
   if(teamHp <= 0){ finish(false); return; }
-  planEnemy();
+  alive.forEach(e => planEnemy(e)); // 各自排下一步
   startTurn();
 }
 
 function finish(won){
   over = true;
   document.getElementById('btnAttack').disabled = true;
-  log(won ? '<span class="win">淵蟲被擊倒了！勝利！（重新整理再玩一場）</span>'
+  log(won ? '<span class="win">淵蟲群被清光了！勝利！（重新整理再玩一場）</span>'
           : '<span class="lose">全隊倒下了……（重新整理再玩一場）</span>');
 }
 
@@ -320,13 +342,24 @@ function tileEl(t, onClick){
   return d;
 }
 function render(){
-  // 敵人
-  document.getElementById('enemyHpFill').style.width = (enemy.hp/enemy.hpMax*100)+'%';
-  document.getElementById('enemyHpText').textContent = `${enemy.hp} / ${enemy.hpMax}`;
-  const intentEl = document.getElementById('enemyIntent');
-  if(eNext && eNext.type==='heavy'){ intentEl.className = 'intent heavy'; intentEl.innerHTML = `⚡ <b style="color:#ff6b6b">蓄力重擊！下回合造成 ${eNext.min}~${eNext.max} 點——快防禦/治療！</b>`; }
-  else if(eNext && eNext.type==='resonance'){ intentEl.className = 'intent reson'; intentEl.innerHTML = `🌀 <b style="color:#c9a0ff">深淵共鳴：造成 ${eNext.min}~${eNext.max} + 下回合波動變【${eNext.wave.desc}】</b>`; }
-  else if(eNext){ intentEl.className = 'intent'; intentEl.textContent = `意圖：下回合攻擊 ${eNext.min}~${eNext.max} 點`; }
+  // 敵人們（每隻一張卡：名字＋血條＋各自意圖；前排標記◄；共鳴意圖只寫「污染波動」不劇透內容）
+  const row = document.getElementById('enemyRow'); row.innerHTML = '';
+  enemies.forEach((e, idx) => {
+    const card = document.createElement('div');
+    const state = e.dead ? 'dead' : (idx === focusIdx ? 'focus' : 'sub');
+    card.className = 'enemy-card ' + state;
+    let intent = '';
+    if(!e.dead && e.next){
+      if(e.next.type === 'heavy') intent = `<span class="i-heavy">⚡ 蓄力重擊 ${e.next.min}~${e.next.max}</span>`;
+      else if(e.next.type === 'resonance') intent = `<span class="i-reson">🌀 深淵共鳴 ${e.next.min}~${e.next.max}<br>＋污染下回合波動</span>`;
+      else intent = `<span class="i-normal">攻擊 ${e.next.min}~${e.next.max}</span>`;
+    }
+    card.innerHTML = `<div class="enemy-name">${idx===focusIdx&&!e.dead?'◄ ':''}${e.name}</div>`
+      + `<div class="hpbar enemy"><div class="hpfill" style="width:${Math.max(0,e.hp/e.hpMax*100)}%"></div><span>${Math.max(0,e.hp)} / ${e.hpMax}</span></div>`
+      + `<div class="ecard-intent">${intent}</div>`;
+    row.appendChild(card);
+  });
+  document.getElementById('enemyIntent').textContent = '';
   // 隊伍
   document.getElementById('teamHpFill').style.width = (teamHp/TEAM_HP_MAX*100)+'%';
   document.getElementById('teamHpText').textContent = `${teamHp} / ${TEAM_HP_MAX}`;
@@ -336,8 +369,16 @@ function render(){
   document.getElementById('cardName').textContent = curCard.name;
   document.getElementById('cardDesc').textContent = curCard.desc;
   const fs = document.getElementById('foresight');
-  if(foreseeLeft > 0){ const peek = cardQueue.slice(0,2).map(c=>c.name).join(' → '); fs.textContent = '洞察：接下來 ' + (peek||'（洗牌中）'); }
-  else fs.textContent = '';
+  if(foreseeLeft > 0){
+    // 洞察的價值：把共鳴「污染成什麼」看穿（共鳴意圖本身只寫「污染波動」）
+    let nextWave;
+    if(corruptNext) nextWave = corruptNext.desc + '（污染）';
+    else {
+      const r = aliveEnemies().find(e => e.next && e.next.type === 'resonance');
+      nextWave = r ? ('被污染成 ' + r.wave.desc) : (cardQueue[0] ? cardQueue[0].name : '未知');
+    }
+    fs.textContent = '🔮 洞察：下回合波動 → ' + nextWave;
+  } else fs.textContent = '';
   // 出招帶
   const sSlots = document.getElementById('seqSlots'); sSlots.innerHTML=''; sSlots.classList.add('seqbar');
   // 算出哪些位置屬於順子/對子，即時高亮
@@ -389,7 +430,9 @@ function render(){
 function floatNum(v, cls, target){
   const layer = document.getElementById(target === 'team' ? 'teamFloat' : 'floatLayer');
   const d = document.createElement('div'); d.className = 'floatnum ' + (cls||''); d.textContent = v;
-  d.style.left = (40 + Math.random()*20) + '%';
+  // 敵人傷害飄在「前排」那隻上；我方飄字置中
+  const baseX = target === 'team' ? 50 : (enemies.length>1 ? 28 + focusIdx*44 : 50);
+  d.style.left = (baseX - 8 + Math.random()*16) + '%';
   layer.appendChild(d); setTimeout(()=>d.remove(), 1150);
 }
 function shake(big){
@@ -425,8 +468,8 @@ function init(){
   document.getElementById('btnClear').onclick = clearSeq;
   document.getElementById('btnAttack').onclick = attack;
   buildPool();
-  planEnemy();
+  enemies.forEach(e => planEnemy(e));
   startTurn();
-  log('潛淵深處，淵蟲擋在前方。排出你的招式吧。');
+  log('潛淵深處，兩隻淵蟲擋在前方。排出你的招式吧。');
 }
 init();
