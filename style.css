@@ -1,0 +1,83 @@
+/* 潛淵 — 戰鬥磚塊制原型樣式。深淵色調、發光磚塊。 */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: radial-gradient(ellipse at top, #16203a 0%, #0a0e1a 70%);
+  color: #dfe6f2;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  min-height: 100vh;
+  padding: 12px;
+}
+#game { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.panel {
+  background: rgba(28, 38, 62, 0.7);
+  border: 1px solid rgba(120, 150, 210, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.row-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #9fb2d6; margin-bottom: 6px; }
+.cap { font-weight: bold; }
+
+/* 血條 */
+.hpbar { position: relative; height: 22px; border-radius: 11px; background: #1b2540; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+.hpbar .hpfill { height: 100%; transition: width .35s ease; }
+.hpbar.enemy .hpfill { background: linear-gradient(90deg, #b23b3b, #e06666); }
+.hpbar.team .hpfill { background: linear-gradient(90deg, #2e8b6f, #4fd1a5); }
+.hpbar span { position: absolute; inset: 0; text-align: center; line-height: 22px; font-size: 12px; font-weight: bold; text-shadow: 0 1px 2px #000; }
+
+/* 敵人 */
+#enemyArea { position: relative; text-align: center; }
+.enemy-name { font-size: 18px; font-weight: bold; margin-bottom: 6px; color: #f0c0c0; }
+.intent { margin-top: 6px; font-size: 13px; color: #ffcf87; }
+#floatLayer { position: absolute; inset: 0; pointer-events: none; }
+.floatnum { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-weight: 900; font-size: 30px; color: #ffd35b; text-shadow: 0 2px 6px #000; animation: floatup 1s ease-out forwards; }
+.floatnum.crit { font-size: 44px; color: #ff6b6b; }
+.floatnum.heal { color: #5fe0a0; }
+@keyframes floatup { from { opacity: 1; top: 45%; } to { opacity: 0; top: 8%; } }
+
+/* 隊伍 */
+.team-label, .card-title { font-size: 12px; color: #9fb2d6; margin-bottom: 5px; }
+#heroRow { display: flex; gap: 6px; margin-top: 8px; }
+.hero { flex: 1; text-align: center; font-size: 12px; padding: 4px; border-radius: 6px; background: rgba(255,255,255,0.04); }
+.hero b { display: block; font-size: 14px; }
+
+/* 波動卡 */
+.card-name { font-size: 16px; font-weight: bold; color: #c9b6f0; }
+.card-desc { font-size: 13px; color: #b9c4dc; }
+.foresight { font-size: 11px; color: #8fa0c0; margin-top: 4px; }
+
+/* 磚塊 */
+.tilebar { display: flex; flex-wrap: wrap; gap: 6px; min-height: 62px; align-items: center; }
+.tile {
+  width: 58px; height: 58px; border-radius: 8px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.2); user-select: none;
+  transition: transform .1s;
+}
+.tile:hover { transform: translateY(-3px); }
+.tile .num { font-size: 22px; font-weight: 900; line-height: 1; }
+.tile .nm { font-size: 10px; margin-top: 2px; }
+.tile .who { font-size: 9px; opacity: .7; }
+/* 依號碼分類上色 */
+.n1, .n5 { background: linear-gradient(160deg, #8a2f2f, #c04a4a); }   /* 打人 紅 */
+.n2 { background: linear-gradient(160deg, #5a3a7a, #8158b0); }       /* 減益 紫 */
+.n3 { background: linear-gradient(160deg, #2e7057, #43a07a); }       /* 保命 綠 */
+.n4 { background: linear-gradient(160deg, #2f5a8a, #4f86c0); }       /* 增益 藍 */
+.seqbar .tile { box-shadow: 0 0 8px rgba(120,180,255,0.4); }
+
+/* 試算 */
+.calc { margin-top: 8px; font-size: 13px; color: #cfe0ff; line-height: 1.6; }
+.calc b { color: #ffd35b; }
+
+/* 按鈕 */
+#btnBar { display: flex; gap: 8px; }
+#btnBar button {
+  flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(150,180,240,0.4);
+  background: #24304f; color: #dfe6f2; font-size: 14px; cursor: pointer; font-weight: bold;
+}
+#btnBar button:hover { background: #2e3c60; }
+#btnBar button.primary { background: linear-gradient(90deg, #b23b6b, #e0567a); border: none; }
+#btnBar button:disabled { opacity: .4; cursor: not-allowed; }
+
+#log { font-size: 12px; color: #9fb2d6; min-height: 40px; line-height: 1.7; padding: 4px 8px; }
+#log .win { color: #5fe0a0; font-weight: bold; }
+#log .lose { color: #ff7a7a; font-weight: bold; }

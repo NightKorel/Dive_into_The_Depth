@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>潛淵 — 戰鬥磚塊制原型</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game">
+
+  <!-- 敵人區 -->
+  <div id="enemyArea" class="panel">
+    <div class="enemy-name" id="enemyName">淵蟲</div>
+    <div class="hpbar enemy"><div class="hpfill" id="enemyHpFill"></div><span id="enemyHpText"></span></div>
+    <div class="intent" id="enemyIntent"></div>
+    <div id="floatLayer"></div>
+  </div>
+
+  <!-- 隊伍血條 -->
+  <div id="teamArea" class="panel">
+    <div class="team-label">全隊共用血條</div>
+    <div class="hpbar team"><div class="hpfill" id="teamHpFill"></div><span id="teamHpText"></span></div>
+    <div id="heroRow"></div>
+  </div>
+
+  <!-- 回合條件卡 -->
+  <div id="cardArea" class="panel">
+    <div class="card-title">潛淵波動</div>
+    <div id="cardName" class="card-name"></div>
+    <div id="cardDesc" class="card-desc"></div>
+    <div id="foresight" class="foresight"></div>
+  </div>
+
+  <!-- 出招帶 -->
+  <div id="seqArea" class="panel">
+    <div class="row-head">
+      <span>出招帶</span>
+      <span id="capText" class="cap"></span>
+    </div>
+    <div id="seqSlots" class="tilebar"></div>
+    <div id="calc" class="calc"></div>
+  </div>
+
+  <!-- 手牌 -->
+  <div id="handArea" class="panel">
+    <div class="row-head"><span>手牌</span></div>
+    <div id="handTiles" class="tilebar"></div>
+  </div>
+
+  <!-- 按鈕 -->
+  <div id="btnBar">
+    <button id="btnStraight">一鍵順子</button>
+    <button id="btnPair">一鍵對子</button>
+    <button id="btnClear">清空</button>
+    <button id="btnAttack" class="primary">出擊！</button>
+  </div>
+
+  <div id="log"></div>
+</div>
+<script src="js/game.js"></script>
+</body>
+</html>
