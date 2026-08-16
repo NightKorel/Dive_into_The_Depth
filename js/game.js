@@ -391,9 +391,16 @@ function render(){
     }
     fs.textContent = '🔮 洞察：下回合波動 → ' + nextWave;
   } else fs.textContent = '';
-  // 出招帶
+  // 手牌
+  const hSlots = document.getElementById('handTiles'); hSlots.innerHTML='';
+  hand.forEach((t,i)=> hSlots.appendChild(tileEl(t, ()=>toSeq(i))));
+  // 出招帶（＋試算＋效果清單）另外抽成 renderSeqBar，拖動排序時只重畫這塊
+  renderSeqBar();
+}
+
+// 只重畫「出招帶＋試算＋效果清單」——拖動排序時只呼叫這個，不整個畫面重畫＝不卡
+function renderSeqBar(){
   const sSlots = document.getElementById('seqSlots'); sSlots.innerHTML=''; sSlots.classList.add('seqbar');
-  // 算出哪些位置屬於順子/對子，即時高亮
   const snums = seq.map(t=>t.skill.num);
   const inStraight = new Set(), inPair = new Set();
   let si = 0;
@@ -406,24 +413,21 @@ function render(){
   for(let k=0;k<snums.length-1;k++) if(snums[k]===snums[k+1]){ inPair.add(k); inPair.add(k+1); }
   const fullRun = fullStraightRun(snums); const fullSet = new Set(fullRun||[]);
   seq.forEach((t,i)=>{
-    const el = tileEl(t, ()=>fromSeq(i));
+    const el = tileEl(t, null); // 出招帶的磚：點擊/拖動都由 attachSeqDrag 處理
     if(fullSet.has(i)) el.classList.add('fullstraight');
     else if(inPair.has(i)) el.classList.add('inpair');
     else if(inStraight.has(i)) el.classList.add('instraight');
+    if(t.uid === draggingUid) el.classList.add('dragging');
+    attachSeqDrag(el, t);
     sSlots.appendChild(el);
   });
   document.getElementById('capText').textContent = `容量 ${seqSum()} / ${currentCap()}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
-  // 手牌
-  const hSlots = document.getElementById('handTiles'); hSlots.innerHTML='';
-  hand.forEach((t,i)=> hSlots.appendChild(tileEl(t, ()=>toSeq(i))));
-  // 試算
   const sc = score(seq, curCard);
   document.getElementById('calc').innerHTML = seq.length
     ? `${fullRun?'<span class="fulltag">✨ 滿順 ✨</span>':''}預計傷害 <b class="big">${sc.preCrit}${sc.crit?`~${sc.preCrit*2}`:''}</b>`
       + `${sc.crit?`　爆擊率 <b>${sc.crit}%</b>`:''}`
       + `　<span class="detail">（基礎 ${sc.base}＋順子 ${sc.straight}${sc.buff?`＋增益 ${sc.buff}`:''}）</span>`
     : '把手牌點上來排序列……';
-  // 效果清單：把序列裡所有非傷害效果條列，讓玩家有感
   const def = collectDef(seq);
   let heal = 0; seq.forEach(t => heal += (t.skill.heal||0));
   const effs = [];
@@ -438,6 +442,49 @@ function render(){
     ? (effs.length ? '出擊會：' + effs.join('　') : '<span class="noeff">（這條沒有附帶效果，純輸出）</span>')
     : '';
   document.getElementById('btnAttack').disabled = over || animating || seq.length===0;
+}
+
+// ---- 出招帶：長按拖放換順序（滑鼠/觸控通用；單點＝移除）----
+let draggingUid = null;
+function fromSeqByUid(uid){ const i = seq.findIndex(t=>t.uid===uid); if(i>=0){ hand.push(seq[i]); seq.splice(i,1); render(); } }
+function attachSeqDrag(el, tile){
+  el.style.touchAction = 'none';
+  el.addEventListener('pointerdown', (ev) => {
+    if(animating) return;
+    ev.preventDefault();
+    const startX = ev.clientX;
+    let active = false, moved = false;
+    const longTimer = setTimeout(() => { if(!active){ active = true; draggingUid = tile.uid; renderSeqBar(); } }, 160);
+    const onMove = (mv) => {
+      if(!active && Math.abs(mv.clientX - startX) > 8){ active = true; clearTimeout(longTimer); draggingUid = tile.uid; renderSeqBar(); }
+      if(active){ moved = true; reorderSeq(tile.uid, mv.clientX); }
+    };
+    const onUp = () => {
+      clearTimeout(longTimer);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      if(active){ draggingUid = null; render(); }
+      else if(!moved){ fromSeqByUid(tile.uid); } // 純點擊＝把磚收回手牌
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+function reorderSeq(uid, clientX){
+  const slots = [...document.getElementById('seqSlots').children];
+  const from = seq.findIndex(t=>t.uid===uid);
+  if(from < 0) return;
+  let target = slots.length;
+  for(let i=0;i<slots.length;i++){
+    const r = slots[i].getBoundingClientRect();
+    if(clientX < r.left + r.width/2){ target = i; break; }
+  }
+  if(target > from) target--;
+  if(target !== from && target >= 0){
+    const [t] = seq.splice(from, 1);
+    seq.splice(target, 0, t);
+    renderSeqBar();
+  }
 }
 function floatNum(v, cls, target){
   const layer = document.getElementById(target === 'team' ? 'teamFloat' : 'floatLayer');

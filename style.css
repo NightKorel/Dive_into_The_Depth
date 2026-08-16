@@ -121,7 +121,8 @@ body {
 .n2 { background: linear-gradient(160deg, #5a3a7a, #8158b0); }       /* 減益 紫 */
 .n3 { background: linear-gradient(160deg, #2e7057, #43a07a); }       /* 保命 綠 */
 .n4 { background: linear-gradient(160deg, #2f5a8a, #4f86c0); }       /* 增益 藍 */
-.seqbar .tile { box-shadow: 0 0 8px rgba(120,180,255,0.4); }
+.seqbar .tile { box-shadow: 0 0 8px rgba(120,180,255,0.4); cursor: grab; }
+.tile.dragging { transform: scale(1.14); opacity: .9; box-shadow: 0 0 18px rgba(255,255,255,.65); z-index: 6; cursor: grabbing; }
 
 /* 試算 */
 .calc { margin-top: 8px; font-size: 13px; color: #cfe0ff; line-height: 1.6; }
