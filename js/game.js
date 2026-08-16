@@ -64,7 +64,7 @@ const CARDS = [
 
 // ---------- 遊戲狀態 ----------
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
-let pool = [], hand = [], seq = [];
+let pool = [], hand = [], seq = [], discard = [];
 let teamHp = TEAM_HP_MAX;
 let enemy = { name:'淵蟲', hpMax:55, hp:55, atkMin:4, atkMax:6 };
 let cardQueue = [], curCard = null, foreseeLeft = 0;
@@ -140,10 +140,19 @@ function collectDef(arr){
 }
 
 // ---------- 回合流程 ----------
+// 補牌到手牌上限；池子抽光才把棄牌堆整疊洗回（＝製造稀缺，用掉的磚不會馬上回來）
+function refill(){
+  while(hand.length < HAND_MAX){
+    if(pool.length === 0){
+      if(discard.length === 0) break;
+      pool = shuffle(discard); discard = [];
+    }
+    hand.push(pool.pop());
+  }
+}
 function startTurn(){
   if(over) return;
-  // 補牌到8
-  while(hand.length < HAND_MAX && pool.length > 0) hand.push(pool.pop());
+  refill();
   curCard = drawCard();
   if(foreseeLeft > 0) foreseeLeft--;
   render();
@@ -203,8 +212,8 @@ function attack(){
   log(`出擊！造成 <b>${total}</b> 傷害${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}`);
 
   const def = collectDef(seq);
-  // 用掉的洗回池子、沒用的留手上
-  seq.forEach(t => pool.push(t)); seq = []; shuffle(pool);
+  // 用掉的進棄牌堆（池子抽光才洗回）、沒用的留手上
+  seq.forEach(t => discard.push(t)); seq = [];
 
   if(enemy.hp <= 0){ render(); finish(true); return; }
   render();
@@ -262,7 +271,7 @@ function render(){
   // 出招帶
   const sSlots = document.getElementById('seqSlots'); sSlots.innerHTML=''; sSlots.classList.add('seqbar');
   seq.forEach((t,i)=> sSlots.appendChild(tileEl(t, ()=>fromSeq(i))));
-  document.getElementById('capText').textContent = `容量 ${seqSum()} / ${currentCap()}`;
+  document.getElementById('capText').textContent = `容量 ${seqSum()} / ${currentCap()}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
   // 手牌
   const hSlots = document.getElementById('handTiles'); hSlots.innerHTML='';
   hand.forEach((t,i)=> hSlots.appendChild(tileEl(t, ()=>toSeq(i))));
