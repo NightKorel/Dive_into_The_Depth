@@ -173,11 +173,13 @@ function refill(){
     hand.push(pool.pop());
   }
 }
+let firstTurn = true;
 function startTurn(){
   if(over) return;
   refill();
-  // 被深淵共鳴污染 → 這回合波動強制變負面；否則正常抽
-  curCard = corruptNext ? corruptNext : drawCard();
+  // 第一回合固定平靜（單純上手）；之後被共鳴污染→負面，否則正常抽
+  if(firstTurn){ curCard = { name:'平靜', desc:'無加成' }; firstTurn = false; }
+  else curCard = corruptNext ? corruptNext : drawCard();
   corruptNext = null;
   if(foreseeLeft > 0) foreseeLeft--;
   render();
