@@ -115,9 +115,11 @@ body {
 
 /* 隊伍 */
 .team-label, .card-title { font-size: 12px; color: #9fb2d6; margin-bottom: 5px; }
-#heroRow { display: flex; gap: 6px; margin-top: 8px; }
-.hero { flex: 1; text-align: center; font-size: 12px; padding: 4px; border-radius: 6px; background: rgba(255,255,255,0.04); }
-.hero b { display: block; font-size: 14px; }
+#heroRow { display: flex; gap: 6px; justify-content: center; margin: 2px 0; }
+.hero { width: 46px; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--hc); box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
+.hero b { font-size: 15px; color: var(--hc); line-height: 1; }
+.hero .hnums { font-size: 9px; color: #8fa0be; margin-top: 2px; letter-spacing: 1px; }
 
 /* 波動卡 */
 .card-name { font-size: 16px; font-weight: bold; color: #c9b6f0; }

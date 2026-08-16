@@ -9,6 +9,14 @@
 <body>
 <div id="game">
 
+  <!-- 回合條件卡（波動）＝最上面 -->
+  <div id="cardArea" class="panel">
+    <div class="card-title">潛淵波動</div>
+    <div id="cardName" class="card-name"></div>
+    <div id="cardDesc" class="card-desc"></div>
+    <div id="foresight" class="foresight"></div>
+  </div>
+
   <!-- 敵人區 -->
   <div id="enemyArea" class="panel">
     <div id="battleTier"></div>
@@ -17,20 +25,14 @@
     <div id="floatLayer"></div>
   </div>
 
-  <!-- 隊伍血條 -->
+  <!-- 四個角色（小方塊） -->
+  <div id="heroRow"></div>
+
+  <!-- 隊伍血條＋體力 -->
   <div id="teamArea" class="panel">
     <div class="bar-row"><span class="bar-label hp">血量</span><div class="hpbar team"><div class="hpfill" id="teamHpFill"></div><span id="teamHpText"></span></div></div>
     <div class="bar-row"><span class="bar-label sta">體力</span><div class="hpbar stamina"><div class="hpfill" id="staminaFill"></div><span id="staminaText"></span></div><button id="btnAllIn">ALL IN！</button></div>
-    <div id="heroRow"></div>
     <div id="teamFloat"></div>
-  </div>
-
-  <!-- 回合條件卡 -->
-  <div id="cardArea" class="panel">
-    <div class="card-title">潛淵波動</div>
-    <div id="cardName" class="card-name"></div>
-    <div id="cardDesc" class="card-desc"></div>
-    <div id="foresight" class="foresight"></div>
   </div>
 
   <!-- 出招帶 -->

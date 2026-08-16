@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.7'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.8'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -422,7 +422,7 @@ function render(){
   const canAllIn = (stamina >= STAMINA_MAX) && !over && !animating;
   allInBtn.classList.toggle('show', canAllIn);
   allInBtn.classList.toggle('active', allIn);
-  document.getElementById('heroRow').innerHTML = HEROES.map(h=>`<div class="hero" style="border-left:4px solid ${h.color}"><b style="color:${h.color}">${h.id}</b>${h.tiles.map(t=>SKILLS[t].num).join(' ')}</div>`).join('');
+  document.getElementById('heroRow').innerHTML = HEROES.map(h=>`<div class="hero" style="--hc:${h.color}"><b>${h.id}</b><span class="hnums">${h.tiles.map(t=>SKILLS[t].num).join(' ')}</span></div>`).join('');
   // 波動卡
   document.getElementById('cardArea').className = 'panel' + (curCard.neg ? ' negwave' : '');
   document.getElementById('cardName').textContent = curCard.name;
@@ -469,7 +469,7 @@ function renderSeqBar(){
     attachSeqDrag(el, t);
     sSlots.appendChild(el);
   });
-  document.getElementById('capText').textContent = `花費 ${seqSum()} / 上限 ${allIn ? stamina+'（ALL IN·只吃體力）' : placeLimit()+`（體力${stamina}·容量${currentCap()}取低）`}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
+  document.getElementById('capText').textContent = `花費 ${seqSum()}/${allIn ? stamina+' ⚡ALL IN' : placeLimit()}　池${pool.length}·棄${discard.length}`;
   const sc = score(seq, curCard);
   document.getElementById('calc').innerHTML = seq.length
     ? `${fullRun?'<span class="fulltag">✨ 滿順 ✨</span>':''}預計傷害 <b class="big">${sc.preCrit}${sc.crit?`~${sc.preCrit*2}`:''}</b>`
