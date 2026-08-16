@@ -64,6 +64,7 @@ const CARDS = [
 
 // ---------- 遊戲狀態 ----------
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
+const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
 let teamHp = TEAM_HP_MAX;
 let enemy = { name:'淵蟲', hpMax:55, hp:55, atkMin:4, atkMax:6 };
@@ -74,9 +75,9 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.rand
 
 // 建池子
 function buildPool(){
-  pool = [];
+  pool = []; discard = [];
   HEROES.forEach(h => h.tiles.forEach(tn => {
-    pool.push({ uid: uid++, skill: SKILLS[tn], who: h.id });
+    for(let k=0;k<DECK_COPIES;k++) pool.push({ uid: uid++, skill: SKILLS[tn], who: h.id });
   }));
   shuffle(pool);
 }
