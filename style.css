@@ -91,11 +91,26 @@ body {
 .tile.firing { animation: fireTile .32s ease; z-index: 3; }
 @keyframes fireTile { 0%{transform:scale(1)} 35%{transform:scale(1.28); filter:brightness(1.9) saturate(1.3); box-shadow:0 0 20px #fff} 100%{transform:scale(1); filter:none} }
 
-/* 序列 combo 即時高亮 */
-.tile.instraight { outline: 2px solid #7fe0ff; outline-offset: 1px; box-shadow: 0 0 12px rgba(127,224,255,.6); }
-.tile.inpair { outline: 2px solid #ffb14e; outline-offset: 1px; box-shadow: 0 0 12px rgba(255,177,78,.6); }
+/* 序列 combo 即時高亮：柔和色(不用螢光)。順子=沉靜藍、對子=暖金；框跟數字都上色。 */
+:root { --c-straight: #74b3cf; --c-pair: #d9a85e; }
+.tile.instraight { outline: 2px solid var(--c-straight); outline-offset: 1px; box-shadow: 0 0 7px rgba(116,179,207,.35); }
+.tile.instraight .num { color: var(--c-straight); }
+.tile.inpair { outline: 2px solid var(--c-pair); outline-offset: 1px; box-shadow: 0 0 7px rgba(217,168,94,.35); }
+.tile.inpair .num { color: var(--c-pair); }
+/* 又是順子又是對子的牌：框與數字在兩色間輪流閃爍 */
+.tile.inboth { outline: 2px solid var(--c-straight); outline-offset: 1px; animation: bothFrame 1.1s infinite; }
+.tile.inboth .num { animation: bothNum 1.1s infinite; }
+@keyframes bothFrame {
+  0%,49.9% { outline-color: var(--c-straight); box-shadow: 0 0 7px rgba(116,179,207,.35); }
+  50%,100% { outline-color: var(--c-pair);     box-shadow: 0 0 7px rgba(217,168,94,.35); }
+}
+@keyframes bothNum {
+  0%,49.9% { color: var(--c-straight); }
+  50%,100% { color: var(--c-pair); }
+}
 /* 滿順 1-2-3-4-5：招牌大絕（靜態金光，不做無限動畫＝省繪製、不卡頓） */
 .tile.fullstraight { outline: 2px solid #ffe082; outline-offset: 1px; box-shadow: 0 0 16px #ffca28, 0 0 7px #ffe082; z-index: 2; }
+.tile.fullstraight .num { color: #ffe082; }
 .calc .fulltag { color:#ffdf6b; font-weight:900; text-shadow:0 0 8px #ffb300; margin-right:6px; }
 
 /* 滿順出擊：金色一閃（只淡入淡出、不縮放＝輕量） */
