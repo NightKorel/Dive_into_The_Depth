@@ -146,6 +146,18 @@ function score(arr, card){
   return { base, straight, buff, pairs, crit, preCrit: base+straight+buff };
 }
 
+// 找滿順（1-2-3-4-5 五連）的位置，找不到回 null
+function fullStraightRun(nums){
+  let i = 0;
+  while(i < nums.length){
+    let run=[i], j=i+1;
+    while(j<nums.length && Math.abs(nums[j]-nums[j-1])===1 && !run.map(x=>nums[x]).includes(nums[j])){ run.push(j); j++; }
+    if(run.length >= 5) return run;
+    i = (j>i) ? j : i+1;
+  }
+  return null;
+}
+
 // 收集防禦/敵傷相關效果（在敵人回合結算）
 function collectDef(arr){
   let mitigate=0, flat=0, minRoll=false, accDown=0, evade=0;
@@ -237,6 +249,7 @@ function attack(){
   const total = Math.ceil(sc.preCrit * (crit?2:1)); // 零頭送玩家
   let heal = 0; seq.forEach(t => heal += (t.skill.heal||0));
   const def = collectDef(seq);
+  const isFull = !!fullStraightRun(seq.map(t=>t.skill.num)); // 滿順？
 
   // 出擊動畫：磚一塊塊亮
   animating = true;
@@ -249,10 +262,11 @@ function attack(){
     enemy.hp = Math.max(0, enemy.hp - total);
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
     if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
-    shake(crit); flashEnemy();
+    shake(crit || isFull); flashEnemy();
+    if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
     if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
-    log(`出擊！造成 <b>${total}</b> 傷害${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}`);
+    log(`出擊！造成 <b>${total}</b> 傷害${isFull?' <b style="color:#ffdf6b">✨滿順✨</b>':''}${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}`);
     seq.forEach(t => discard.push(t)); seq = [];
     animating = false;
     render();
@@ -337,9 +351,11 @@ function render(){
     si = (j>si)?j:si+1;
   }
   for(let k=0;k<snums.length-1;k++) if(snums[k]===snums[k+1]){ inPair.add(k); inPair.add(k+1); }
+  const fullRun = fullStraightRun(snums); const fullSet = new Set(fullRun||[]);
   seq.forEach((t,i)=>{
     const el = tileEl(t, ()=>fromSeq(i));
-    if(inPair.has(i)) el.classList.add('inpair');
+    if(fullSet.has(i)) el.classList.add('fullstraight');
+    else if(inPair.has(i)) el.classList.add('inpair');
     else if(inStraight.has(i)) el.classList.add('instraight');
     sSlots.appendChild(el);
   });
@@ -350,7 +366,7 @@ function render(){
   // 試算
   const sc = score(seq, curCard);
   document.getElementById('calc').innerHTML = seq.length
-    ? `預計傷害 <b class="big">${sc.preCrit}${sc.crit?`~${sc.preCrit*2}`:''}</b>`
+    ? `${fullRun?'<span class="fulltag">✨ 滿順 ✨</span>':''}預計傷害 <b class="big">${sc.preCrit}${sc.crit?`~${sc.preCrit*2}`:''}</b>`
       + `${sc.crit?`　爆擊率 <b>${sc.crit}%</b>`:''}`
       + `　<span class="detail">（基礎 ${sc.base}＋順子 ${sc.straight}${sc.buff?`＋增益 ${sc.buff}`:''}）</span>`
     : '把手牌點上來排序列……';
@@ -391,6 +407,12 @@ function redVignette(){
   const v = document.getElementById('vignette');
   v.classList.remove('flash'); void v.offsetWidth; v.classList.add('flash');
   setTimeout(()=> v.classList.remove('flash'), 560);
+}
+// 滿順出擊：整片金色光爆
+function goldBurst(){
+  const b = document.getElementById('burst');
+  b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+  setTimeout(()=> b.classList.remove('go'), 720);
 }
 let logLines = [];
 function log(html){ logLines.unshift(html); logLines = logLines.slice(0,5); document.getElementById('log').innerHTML = logLines.map(l=>'· '+l).join('<br>'); }
