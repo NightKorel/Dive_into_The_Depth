@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.45'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.46'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -137,11 +137,14 @@ function makeWorm(name, pattern, stats){
 // pattern 錯開＝兩隻重擊不會同回合
 const PAT_A = ['normal','normal','heavy','normal','resonance','normal'];
 const PAT_B = ['normal','resonance','normal','heavy','normal','normal'];
+// 小怪專屬 pattern：不會深淵共鳴（污染波動是進階威脅、留給菁英+）；重擊仍錯開
+const PAT_SMALL_A = ['normal','normal','heavy','normal','normal','normal'];
+const PAT_SMALL_B = ['normal','normal','normal','heavy','normal','normal'];
 // 選關：三種戰鬥（數值都是佔位、待小艾校準）
 const BATTLES = {
   small: { tier:'小怪戰', intro:'幾隻小淵蟲竄了出來。', make:()=>[
-    makeWorm('小淵蟲', PAT_A, { hpMax:22, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
-    makeWorm('小淵蟲', PAT_B, { hpMax:22, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
+    makeWorm('小淵蟲', PAT_SMALL_A, { hpMax:22, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
+    makeWorm('小淵蟲', PAT_SMALL_B, { hpMax:22, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
   ]},
   elite: { tier:'⚔ 菁英戰', intro:'兩隻大淵蟲擋在前方。', make:()=>[
     makeWorm('大淵蟲', PAT_A, { hpMax:40, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
