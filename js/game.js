@@ -210,7 +210,7 @@ function startTurn(){
   else curCard = corruptNext ? corruptNext : drawCard();
   corruptNext = null;
   if(foreseeLeft > 0) foreseeLeft--;
-  animating = false; // 新回合就緒，解鎖玩家操作
+  animating = false; dragSession = null; draggingUid = null; // 新回合就緒，解鎖並清掉殘留拖動狀態
   render();
 }
 
@@ -276,6 +276,7 @@ function attack(){
   const wait = els.length*110 + 260;
 
   setTimeout(()=>{
+   try {
     const tgt = focusEnemy();
     tgt.hp = Math.max(0, tgt.hp - total);
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
@@ -293,35 +294,45 @@ function attack(){
     if(tgt.dead){ advanceFocus(); log('另一隻淵蟲逼近……'); } // 無縫切換前排
     render();
     setTimeout(()=> enemyTurn(def), 720);
+   } catch(err){
+    log('⚠ 出擊結算出錯：' + (err && err.message) + '（已強制續行，請截圖給我）');
+    seq = []; animating = false; render();
+   }
   }, wait);
 }
 
 // 敵人回合：所有活著的敵人都出手（全體減傷/命中 debuff 對每一隻都作用＝全體效果有意義）
 function enemyTurn(def){
   if(over) return;
-  const alive = aliveEnemies();
-  let taken = 0, anyHeavy = false;
-  alive.forEach((e, i) => {
-    const mv = e.next, heavy = mv.type === 'heavy', reson = mv.type === 'resonance';
-    if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c9a0ff">深淵共鳴</b>！下回合波動被污染（用洞察才看得到內容）`); }
-    const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
-    if(Math.random() > hitChance){ setTimeout(()=> floatNum('MISS','miss','team'), i*260); log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''} <b>閃避</b>了！`); return; }
-    let dmg = def.minRoll ? mv.min : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
-    const raw = dmg;
-    dmg = Math.max(0, dmg - def.mitigate - def.flat); // 全體減傷/風壓/精準對每隻都減
-    const blocked = raw - dmg;
-    teamHp = Math.max(0, teamHp - dmg); taken += dmg; if(heavy) anyHeavy = true;
-    if(blocked > 0) setTimeout(()=> floatNum('🛡 ' + (dmg===0?'完全擋下':blocked), 'block', 'team'), i*260);
-    if(dmg > 0) setTimeout(()=> floatNum('-' + dmg, 'dmg', 'team'), i*260 + (blocked>0?180:0));
-    const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
-    log(`淵蟲${label} ${raw}${blocked?`（減免 ${blocked}）`:''} → 受到 <b>${dmg}</b>`);
-  });
-  if(taken > 0) shake(anyHeavy);
-  if(taken >= TEAM_HP_MAX * 0.25) redVignette();
-  render();
-  if(teamHp <= 0){ finish(false); return; }
-  alive.forEach(e => planEnemy(e)); // 各自排下一步
-  startTurn();
+  try {
+    const alive = aliveEnemies();
+    let taken = 0, anyHeavy = false;
+    alive.forEach((e, i) => {
+      const mv = e.next || { type:'normal', min:e.atkMin, max:e.atkMax }; // 保險：next 萬一為空也不炸
+      const heavy = mv.type === 'heavy', reson = mv.type === 'resonance';
+      if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c9a0ff">深淵共鳴</b>！下回合波動被污染（用洞察才看得到內容）`); }
+      const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
+      if(Math.random() > hitChance){ setTimeout(()=> floatNum('MISS','miss','team'), i*260); log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''} <b>閃避</b>了！`); return; }
+      let dmg = def.minRoll ? mv.min : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
+      const raw = dmg;
+      dmg = Math.max(0, dmg - def.mitigate - def.flat); // 全體減傷/風壓/精準對每隻都減
+      const blocked = raw - dmg;
+      teamHp = Math.max(0, teamHp - dmg); taken += dmg; if(heavy) anyHeavy = true;
+      if(blocked > 0) setTimeout(()=> floatNum('🛡 ' + (dmg===0?'完全擋下':blocked), 'block', 'team'), i*260);
+      if(dmg > 0) setTimeout(()=> floatNum('-' + dmg, 'dmg', 'team'), i*260 + (blocked>0?180:0));
+      const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
+      log(`淵蟲${label} ${raw}${blocked?`（減免 ${blocked}）`:''} → 受到 <b>${dmg}</b>`);
+    });
+    if(taken > 0) shake(anyHeavy);
+    if(taken >= TEAM_HP_MAX * 0.25) redVignette();
+    render();
+    if(teamHp <= 0){ finish(false); return; }
+    alive.forEach(e => planEnemy(e)); // 各自排下一步
+    startTurn();
+  } catch(err){
+    log('⚠ 敵人回合出錯：' + (err && err.message) + '（已強制續行，請截圖給我）');
+    corruptNext = null; animating = false; render(); // 解鎖、不卡死
+  }
 }
 
 function finish(won){
