@@ -31,7 +31,7 @@ const SKILLS = {
   洞察: { name:'洞察', num:2, desc:'預知接下來兩回合波動', eff:{ foresight:true } },
   霜爆: { name:'霜爆', num:5, dmg:5, desc:'造成 5 點傷害' },
   影鞭: { name:'影鞭', num:1, dmg:1, desc:'造成 1 點傷害' },
-  威壓: { name:'威壓', num:4, desc:'本回合全體敵人命中 -50%', eff:{ enemyAcc:0.5 } },
+  威壓: { name:'威壓', num:4, desc:'本回合全體敵人命中 -40%', eff:{ enemyAcc:0.4 } },
   吸取: { name:'吸取', num:3, dmg:1, heal:2, desc:'造成1傷害，回復2血' },
   影幕: { name:'影幕', num:2, desc:'本回合我方閃避 +30%', eff:{ evade:0.3 } },
   火刃: { name:'火刃', num:1, dmg:1, desc:'造成 1 點傷害' },
@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.51'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.52'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -366,7 +366,7 @@ function attack(){
   let heal = 0; seq.forEach(t => heal += (t.skill.heal||0));
   const def = collectDef(seq);
   // 爆擊放大「保命」＝3 號的治療和減傷都 ×2（兩種都能爆，減傷才不會顯得虧）。
-  // 只放大保命，不碰 4 號減益(威壓 -50% 若爆成 -100% 會壞)。減傷在敵人回合套用，double 過的 def 會傳進 enemyTurn。
+  // 只放大保命，不碰 4 號減益(威壓 -40% 若爆成 -80% 會壞)。減傷在敵人回合套用，double 過的 def 會傳進 enemyTurn。
   if(crit){ heal *= 2; def.mitigate *= 2; }
   const isFull = !!fullStraightRun(seq.map(t=>t.skill.num)); // 滿順？
 
