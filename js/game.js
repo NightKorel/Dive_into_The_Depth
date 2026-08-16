@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'V0.05'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
+const VERSION = 'V0.06'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
@@ -294,8 +294,8 @@ function attack(){
     const tgt = focusEnemy();
     tgt.hp = Math.max(0, tgt.hp - total);
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
-    const foresightN = seq.filter(t=>t.skill.eff && t.skill.eff.foresight).length; // 每張洞察 +2 回合、可累加
-    if(foresightN) foreseeLeft = Math.min(8, foreseeLeft + 2*foresightN);
+    // 洞察：只看下一回合波動、不疊加（波動牌庫小、看太多回會太強）
+    if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 2;
     shake(crit || isFull); flashEnemy();
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
