@@ -342,22 +342,33 @@ function tileEl(t, onClick){
   return d;
 }
 function render(){
-  // 敵人們（每隻一張卡：名字＋血條＋各自意圖；前排標記◄；共鳴意圖只寫「污染波動」不劇透內容）
-  const row = document.getElementById('enemyRow'); row.innerHTML = '';
+  // 敵人們：原地更新、不重建 DOM（重建會害 focus/dead 動畫每次 render 都重放＝奇怪彈跳）
+  const row = document.getElementById('enemyRow');
+  if(row.children.length !== enemies.length){
+    row.innerHTML = '';
+    enemies.forEach(()=>{
+      const card = document.createElement('div');
+      card.className = 'enemy-card';
+      card.innerHTML = `<div class="enemy-name"></div>`
+        + `<div class="hpbar enemy"><div class="hpfill"></div><span></span></div>`
+        + `<div class="ecard-intent"></div>`;
+      row.appendChild(card);
+    });
+  }
   enemies.forEach((e, idx) => {
-    const card = document.createElement('div');
-    const state = e.dead ? 'dead' : (idx === focusIdx ? 'focus' : 'sub');
-    card.className = 'enemy-card ' + state;
+    const card = row.children[idx];
+    const cls = 'enemy-card ' + (e.dead ? 'dead' : (idx === focusIdx ? 'focus' : 'sub'));
+    if(card.className !== cls) card.className = cls; // 只有狀態真的變才換 class ＝ 動畫只在切換/死亡放一次
+    card.querySelector('.enemy-name').textContent = (idx===focusIdx && !e.dead ? '◄ ' : '') + e.name;
+    card.querySelector('.hpfill').style.width = Math.max(0, e.hp/e.hpMax*100) + '%';
+    card.querySelector('.hpbar span').textContent = `${Math.max(0,e.hp)} / ${e.hpMax}`;
     let intent = '';
     if(!e.dead && e.next){
       if(e.next.type === 'heavy') intent = `<span class="i-heavy">⚡ 蓄力重擊 ${e.next.min}~${e.next.max}</span>`;
       else if(e.next.type === 'resonance') intent = `<span class="i-reson">🌀 深淵共鳴 ${e.next.min}~${e.next.max}<br>＋污染下回合波動</span>`;
       else intent = `<span class="i-normal">攻擊 ${e.next.min}~${e.next.max}</span>`;
     }
-    card.innerHTML = `<div class="enemy-name">${idx===focusIdx&&!e.dead?'◄ ':''}${e.name}</div>`
-      + `<div class="hpbar enemy"><div class="hpfill" style="width:${Math.max(0,e.hp/e.hpMax*100)}%"></div><span>${Math.max(0,e.hp)} / ${e.hpMax}</span></div>`
-      + `<div class="ecard-intent">${intent}</div>`;
-    row.appendChild(card);
+    card.querySelector('.ecard-intent').innerHTML = intent;
   });
   document.getElementById('enemyIntent').textContent = '';
   // 隊伍
