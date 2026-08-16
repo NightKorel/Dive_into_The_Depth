@@ -51,16 +51,18 @@ const HERO_COLOR = {}; HEROES.forEach(h => HERO_COLOR[h.id] = h);
 
 // ---------- 設定（改名／改主角色／顯示卡牌詳細效果；存 localStorage） ----------
 const SETTINGS_KEY = 'yuan2_settings';
-let settings = { playerName:'', heroColor:'#E8A63C', showTileEff:true }; // playerName 空＝沒取名，顯示預設「主角」（全名）；一旦取名就只顯示首字
+// playerName＝全名（劇情/其他地方角色叫的名字）；battleNick＝戰鬥暱稱（≤2 字，戰鬥介面只顯示這個）
+let settings = { playerName:'', battleNick:'', heroColor:'#E8A63C', showTileEff:true };
 function loadSettings(){ try{ const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); if(s && typeof s==='object') Object.assign(settings, s); }catch(e){} }
 function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
-// 主角改名：內部識別仍用 '主角'（磚的 who、顏色查表都靠它），只有「顯示」換成玩家取的名字。
-// 戰鬥中各處只顯示名字的「第一個字」（長名字才不會撐爆磚/角色方塊）；沒取名時維持預設「主角」。
-// ⚠️ 之後做「玩家取名」流程時要提醒玩家：戰鬥中只會顯示第一個字。
+// 主角顯示名：內部識別仍用 '主角'（磚的 who、顏色查表都靠它）。
+// 戰鬥介面只顯示「戰鬥暱稱」（≤2 字，才不會撐爆磚/角色方塊）；沒設暱稱就退而用全名前 2 字、再沒有就預設「主角」。
 function displayName(id){
   if(id !== '主角') return id;
-  const nm = String(settings.playerName).trim();
-  return nm ? nm.charAt(0) : '主角';
+  const nick = String(settings.battleNick).trim();
+  if(nick) return nick.slice(0,2);
+  const full = String(settings.playerName).trim();
+  return full ? full.slice(0,2) : '主角';
 }
 // 依主角選的色，自動算一個較深的底色（磚的漸層用）
 function darken(hex, f=0.55){
@@ -87,7 +89,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.19'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.20'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -623,14 +625,19 @@ function openSettings(){
 function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
 function renderSettings(){
   const nameEsc = String(settings.playerName).replace(/"/g,'&quot;');
+  const nickEsc = String(settings.battleNick).replace(/"/g,'&quot;');
+  const nickPh = (String(settings.playerName).trim().slice(0,2) || '主角'); // 暱稱空白時的預設＝全名前 2 字
   document.getElementById('settingsModal').innerHTML =
     `<h3>設定</h3>`
     + `<div class="set-row"><label>主角名字</label><input type="text" id="setName" maxlength="8" value="${nameEsc}" placeholder="主角"></div>`
+    + `<div class="set-row"><label>戰鬥暱稱（2 字內）</label><input type="text" id="setNick" maxlength="2" value="${nickEsc}" placeholder="${nickPh}"></div>`
+    + `<div class="set-hint">「主角名字」＝劇情裡和其他地方角色叫你的名字；「戰鬥暱稱」＝戰鬥介面顯示用（最多 2 字）。暱稱留空就自動取名字前 2 個字。</div>`
     + `<div class="set-row"><label>主角代表色</label><input type="color" id="setColor" value="${settings.heroColor}"></div>`
     + `<div class="set-row toggle" id="setEffRow"><label>顯示卡牌詳細效果</label><span class="switch ${settings.showTileEff?'on':''}">${settings.showTileEff?'開':'關'}</span></div>`
     + `<div class="set-hint">效果字很小、顯示在每張磚下方；新手建議開著（關掉版面更簡潔，滑鼠指上去仍看得到）。</div>`
     + `<button class="modal-close" id="setClose">關閉</button>`;
-  document.getElementById('setName').oninput = e => { settings.playerName = e.target.value; saveSettings(); render(); };
+  document.getElementById('setName').oninput = e => { settings.playerName = e.target.value; document.getElementById('setNick').placeholder = (e.target.value.trim().slice(0,2) || '主角'); saveSettings(); render(); };
+  document.getElementById('setNick').oninput = e => { settings.battleNick = e.target.value; saveSettings(); render(); };
   document.getElementById('setColor').oninput = e => { settings.heroColor = e.target.value; applyHeroColor(); saveSettings(); render(); };
   document.getElementById('setEffRow').onclick = () => { settings.showTileEff = !settings.showTileEff; applyTileEff(); saveSettings(); renderSettings(); };
   document.getElementById('setClose').onclick = closeModal;
