@@ -39,12 +39,14 @@ const SKILLS = {
 };
 
 // ---------- 開局四人（含二選一的預設選擇；之後可做成可調 loadout）----------
+// 代表色沿用淵1（納可指定的精確色號）：主角土金、K棕、V深藍、L森林綠。
 const HEROES = [
-  { id:'主角', tiles:['精準','格擋','重斬'] }, // 2,3,5
-  { id:'K',   tiles:['風刃','風壓','治癒'] }, // 1,2,3
-  { id:'V',   tiles:['蓄力','刀舞','刀舞'] }, // 4,5,5（雙大招）
-  { id:'L',   tiles:['療藥','洞察','霜爆'] }, // 3,4,5
+  { id:'主角', tiles:['精準','格擋','重斬'], color:'#BC954E', dark:'#7a5f30' }, // 2,3,5
+  { id:'K',   tiles:['風刃','風壓','治癒'], color:'#9C6F27', dark:'#5f4318' }, // 1,2,3
+  { id:'V',   tiles:['隱忍','蓄力','刀舞'], color:'#4067A2', dark:'#26406a' }, // 3,4,5（三張不同）
+  { id:'L',   tiles:['療藥','洞察','霜爆'], color:'#9EBF7B', dark:'#5f7a4a' }, // 3,4,5
 ];
+const HERO_COLOR = {}; HEROES.forEach(h => HERO_COLOR[h.id] = h);
 
 // ---------- 回合條件卡（潛淵波動）10 張 ----------
 const CARDS = [
@@ -234,7 +236,9 @@ function finish(won){
 // ---------- 畫面 ----------
 function tileEl(t, onClick){
   const d = document.createElement('div');
-  d.className = 'tile n' + t.skill.num;
+  d.className = 'tile';
+  const c = HERO_COLOR[t.who] || { color:'#555', dark:'#333' };
+  d.style.background = `linear-gradient(160deg, ${c.dark}, ${c.color})`;
   d.innerHTML = `<span class="num">${t.skill.num}</span><span class="nm">${t.skill.name}</span><span class="who">${t.who}</span>`;
   d.title = `${t.skill.name}（${t.who}）：${t.skill.desc}`;
   d.onclick = onClick;
@@ -248,7 +252,7 @@ function render(){
   // 隊伍
   document.getElementById('teamHpFill').style.width = (teamHp/TEAM_HP_MAX*100)+'%';
   document.getElementById('teamHpText').textContent = `${teamHp} / ${TEAM_HP_MAX}`;
-  document.getElementById('heroRow').innerHTML = HEROES.map(h=>`<div class="hero"><b>${h.id}</b>${h.tiles.map(t=>SKILLS[t].num).join(' ')}</div>`).join('');
+  document.getElementById('heroRow').innerHTML = HEROES.map(h=>`<div class="hero" style="border-left:4px solid ${h.color}"><b style="color:${h.color}">${h.id}</b>${h.tiles.map(t=>SKILLS[t].num).join(' ')}</div>`).join('');
   // 波動卡
   document.getElementById('cardName').textContent = curCard.name;
   document.getElementById('cardDesc').textContent = curCard.desc;
