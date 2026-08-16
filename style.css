@@ -156,6 +156,7 @@ body {
 /* 磚塊 */
 .tilebar { display: flex; flex-wrap: wrap; gap: 6px; min-height: 62px; align-items: center; }
 .tile {
+  position: relative;
   width: 58px; height: 58px; border-radius: 8px; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   border: 1px solid rgba(255,255,255,0.2); user-select: none;
@@ -169,6 +170,8 @@ body {
   text-shadow: 0 -1px 0 rgba(255,255,255,.35), 0 1px 1px rgba(0,0,0,.6), 0 2px 3px rgba(0,0,0,.4); }
 .tile .nm { font-size: 10px; margin-top: 2px; }
 .tile .who { font-size: 9px; opacity: .7; }
+/* 右上角小效果徽章：小小的、絕對定位不影響排版 */
+.tile .badge { position: absolute; top: 1px; right: 2px; font-size: 11px; line-height: 1; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
 /* 依號碼分類上色 */
 .n1, .n5 { background: linear-gradient(160deg, #8a2f2f, #c04a4a); }   /* 打人 紅 */
 .n2 { background: linear-gradient(160deg, #5a3a7a, #8158b0); }       /* 減益 紫 */

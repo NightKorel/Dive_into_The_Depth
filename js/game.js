@@ -89,7 +89,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.27'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.28'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -414,6 +414,17 @@ function finish(won){
 }
 
 // ---------- 畫面 ----------
+// 右上角效果徽章：看技能角色。1攻擊🗡️／2減益🔯／3保命(有回血=治療💚,否則減傷🛡️)／4增益✨／5大招💥
+function effIcon(skill){
+  switch(skill.num){
+    case 1: return '🗡️';
+    case 2: return '🔯';
+    case 3: return skill.heal ? '💚' : '🛡️';
+    case 4: return '✨';
+    case 5: return '💥';
+    default: return '';
+  }
+}
 function tileEl(t, onClick){
   const d = document.createElement('div');
   d.className = 'tile';
@@ -421,7 +432,9 @@ function tileEl(t, onClick){
   d.style.background = `linear-gradient(160deg, ${c.dark}, ${c.color})`;
   const circ = ['','❶','❷','❸','❹','❺'][t.skill.num] || t.skill.num; // 詳細效果模式用的圈圈數字
   const descHtml = t.skill.desc.replace(/([+-]?\d+%?)/g, '<b class="dnum">$1</b>'); // 描述裡的數字(3、-2、-30% 之類)加粗突出
-  d.innerHTML = `<span class="num">${t.skill.num}</span><span class="cnum">${circ}</span><span class="nm">${t.skill.name}</span><span class="who">${displayName(t.who)}</span><span class="eff">${descHtml}</span>`;
+  const icon = effIcon(t.skill); // 右上角小效果徽章
+  d.innerHTML = `<span class="num">${t.skill.num}</span><span class="cnum">${circ}</span><span class="nm">${t.skill.name}</span><span class="who">${displayName(t.who)}</span><span class="eff">${descHtml}</span>`
+    + (icon ? `<span class="badge">${icon}</span>` : '');
   d.title = `${t.skill.name}（${displayName(t.who)}）：${t.skill.desc}`;
   d.onclick = onClick;
   return d;
