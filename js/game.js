@@ -6,7 +6,7 @@
 
    規則摘要：
    - 池子 = 場上4角色 × 每人3磚 × 每張2份 = 24。每回合補手牌到8。用掉進棄牌堆、池空才洗回、沒用留手上。
-   - 容量 15（每回合排列的數字總和上限，照舊每回合重置）。體力＝獨立充能條（起0/回合+13/上限40），只給 ALL IN 用：滿40可按、按下這回合容量無限、出擊後花光體力。
+   - 容量 15（每回合排列的數字總和上限，照舊每回合重置）。體力＝會累積的行動池（起0/回合+13/上限40），出擊實際扣體力＝排出去的數字總和。每回合能排的總和＝min(體力,容量)。ALL IN(滿40可按)＝把容量拿掉、只剩體力當上限，能一口氣梭到 40。
    - 基礎傷害 = 序列中各磚的傷害值（1磚打1、5磚打5、吸取1）加總。
    - 順子(相鄰連號不重複) 加成 = 基數3 ×(長度-1)。
    - 對子(相鄰同號) → 爆擊率，每對+15%，爆擊=總傷害×2。
@@ -64,12 +64,13 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.5'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.6'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
-// 體力（＝ ALL IN 的獨立充能條，跟容量分開）：起 0，每回合開始 +13，上限 40。平常只會長；只有 ALL IN 會花掉它。
+// 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
+// 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
 const STAMINA_MAX = 40, STAMINA_GAIN = 13;
 let stamina = 0;
-let allIn = false; // ALL IN！：體力滿時可按，這回合容量無限、出擊後花光體力
+let allIn = false; // ALL IN！：體力滿 40 才能按，這回合把容量拿掉（無限）＝只剩體力當上限，能一口氣梭到 40
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
 let teamHp = TEAM_HP_MAX;
@@ -135,6 +136,8 @@ function drawCard(){
 
 // 每回合容量＝15（＋波動臨時 ±）；ALL IN 時無限
 function currentCap(){ return allIn ? Infinity : Math.max(0, CAP_BASE + (curCard.capBonus || 0)); }
+// 這回合實際能排的數字總和上限＝體力和容量取低（ALL IN 時容量無限＝只剩體力當上限）
+function placeLimit(){ return Math.min(stamina, currentCap()); }
 function seqSum(){ return seq.reduce((s,t)=> s + t.skill.num, 0); }
 
 // ---------- 計分 ----------
@@ -229,7 +232,7 @@ function startTurn(){
 function toSeq(idx){
   if(animating) return;
   const t = hand[idx];
-  if(seqSum() + t.skill.num > currentCap()){ flash('容量不足'); return; }
+  if(seqSum() + t.skill.num > placeLimit()){ flash(stamina < currentCap() ? '體力不足' : '容量不足'); return; }
   hand.splice(idx,1); seq.push(t); render();
 }
 function fromSeq(idx){ if(animating) return; hand.push(seq[idx]); seq.splice(idx,1); render(); }
@@ -247,7 +250,7 @@ function autoStraight(){
     for(let n=start; n<=5; n++){
       if(byNum[n] && byNum[n].length){
         const t = byNum[n][0];
-        if(sum + t.skill.num <= currentCap()){ picked.push(t); sum+=t.skill.num; }
+        if(sum + t.skill.num <= placeLimit()){ picked.push(t); sum+=t.skill.num; }
       }
     }
     if(picked.length > best.length) best = picked;
@@ -264,7 +267,7 @@ function autoPair(){
   const order = Object.keys(byNum).sort((a,b)=> Number(b) - Number(a));
   let sum=0;
   order.forEach(n=>{
-    byNum[n].forEach(t=>{ if(sum + t.skill.num <= currentCap()){ const i=hand.indexOf(t); if(i>=0){ hand.splice(i,1); seq.push(t); sum+=t.skill.num; } } });
+    byNum[n].forEach(t=>{ if(sum + t.skill.num <= placeLimit()){ const i=hand.indexOf(t); if(i>=0){ hand.splice(i,1); seq.push(t); sum+=t.skill.num; } } });
   });
   render();
 }
@@ -273,6 +276,7 @@ function autoPair(){
 let animating = false;
 function attack(){
   if(over || animating || seq.length === 0) return;
+  const spent = seqSum(); // 這次出擊要扣的體力＝排出去那串磚的數字總和
   const sc = score(seq, curCard);
   const crit = Math.random()*100 < sc.crit;
   const total = Math.ceil(sc.preCrit * (crit?2:1)); // 零頭送玩家
@@ -300,7 +304,7 @@ function attack(){
   setTimeout(()=>{
    try {
     const tgt = focusEnemy();
-    if(allIn) stamina = 0; // ALL IN 花光體力（平常出擊不動體力）
+    stamina = Math.max(0, stamina - spent); // 出擊扣體力＝排出去的數字總和（ALL IN 只是把容量拿掉、扣法一樣）
     allIn = false;
     tgt.hp = Math.max(0, tgt.hp - total);
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
@@ -465,7 +469,7 @@ function renderSeqBar(){
     attachSeqDrag(el, t);
     sSlots.appendChild(el);
   });
-  document.getElementById('capText').textContent = `花費 ${seqSum()} / ${allIn ? 'ALL IN 無限' : '容量 '+currentCap()}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
+  document.getElementById('capText').textContent = `花費 ${seqSum()} / 上限 ${allIn ? stamina+'（ALL IN·只吃體力）' : placeLimit()+`（體力${stamina}·容量${currentCap()}取低）`}　·　池子 ${pool.length}／棄牌 ${discard.length}`;
   const sc = score(seq, curCard);
   document.getElementById('calc').innerHTML = seq.length
     ? `${fullRun?'<span class="fulltag">✨ 滿順 ✨</span>':''}預計傷害 <b class="big">${sc.preCrit}${sc.crit?`~${sc.preCrit*2}`:''}</b>`
