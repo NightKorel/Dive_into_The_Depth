@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'V0.03'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
+const VERSION = 'V0.04'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
@@ -412,7 +412,7 @@ function render(){
     if(corruptNext) nextWave = corruptNext.desc + '（污染）';
     else {
       const r = aliveEnemies().find(e => e.next && e.next.type === 'resonance');
-      nextWave = r ? ('被污染成 ' + r.wave.desc) : (cardQueue[0] ? cardQueue[0].name : '未知');
+      nextWave = r ? ('被污染成 ' + r.next.wave.desc) : (cardQueue[0] ? cardQueue[0].name : '未知');
     }
     fs.textContent = '🔮 洞察：下回合波動 → ' + nextWave;
   } else fs.textContent = '';
