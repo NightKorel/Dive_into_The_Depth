@@ -9,7 +9,7 @@
    - 容量 15（每回合排列的數字總和上限，照舊每回合重置）。體力＝會累積的行動池（起0/回合+13/上限40），出擊實際扣體力＝排出去的數字總和。每回合能排的總和＝min(體力,容量)。ALL IN(滿40可按)＝把容量拿掉、只剩體力當上限，能一口氣梭到 40。
    - 基礎傷害 = 序列中各磚的傷害值（1磚打1、5磚打5、吸取1）加總。
    - 順子(相鄰連號不重複) 加成 = 基數3 ×(長度-1)。
-   - 對子(相鄰同號) → 爆擊率，每對+15%，爆擊=總傷害×2。
+   - 對子(相鄰同號) → 爆擊率，每對+15%，爆擊=傷害×2(且這回合治療與減傷也×2；不含4號減益)。
    - 條件卡每回合抽1。零頭一律無條件進位（送給玩家）。
    ============================================================ */
 
@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.49'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.50'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -365,6 +365,9 @@ function attack(){
   const total = Math.ceil(sc.preCrit * (crit?2:1)); // 零頭送玩家
   let heal = 0; seq.forEach(t => heal += (t.skill.heal||0));
   const def = collectDef(seq);
+  // 爆擊放大「保命」＝3 號的治療和減傷都 ×2（兩種都能爆，減傷才不會顯得虧）。
+  // 只放大保命，不碰 4 號減益(威壓 -50% 若爆成 -100% 會壞)。減傷在敵人回合套用，double 過的 def 會傳進 enemyTurn。
+  if(crit){ heal *= 2; def.mitigate *= 2; }
   const isFull = !!fullStraightRun(seq.map(t=>t.skill.num)); // 滿順？
 
   // 出擊動畫：磚一塊塊亮
@@ -407,7 +410,7 @@ function attack(){
     flashEnemy(); // 打怪：只有敵人抖（flashEnemy 本身含位移），不震整個畫面
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); setTimeout(()=> floatNum('體力全退 +15', 'heal', 'team'), 360); log('✨ <b style="color:#ffe082">滿順</b>！體力全額退還（+15）'); }
     floatNum(total, crit?'crit':'');
-    if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
+    if(heal) setTimeout(()=> floatNum((crit?'💥 +':'+')+heal, 'heal', 'team'), 220); // 爆擊回血加 💥 標記
     if(overflow > 0) setTimeout(()=> floatNum('溢出 '+overflow, 'spill'), 300); // 溢出傷害飄字（小小的、不強調）
     let killMsg = '';
     enemies.forEach(e => { if(e.hp <= 0 && !e.dead){ e.dead = true; killMsg += ' <b style="color:#ff9a9a">淵蟲倒下！</b>'; } });
