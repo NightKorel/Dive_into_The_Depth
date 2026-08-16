@@ -57,9 +57,16 @@ body {
 #enemyArea.hit { animation: enemyHit .38s; }
 @keyframes enemyHit { 0%{filter:none;transform:translateX(0)} 20%{filter:brightness(2.2) saturate(2);transform:translateX(-7px)} 55%{transform:translateX(7px)} 100%{filter:none;transform:translateX(0)} }
 
-/* 重擊預告脈動 */
+/* 重擊/共鳴預告脈動 */
 .intent.heavy { animation: warnPulse .8s infinite; }
+.intent.reson { animation: warnPulse 1s infinite; }
 @keyframes warnPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* 負面波動：卡面染紫紅、微微脈動 */
+#cardArea.negwave { border-color: rgba(190,120,220,.6); box-shadow: 0 0 14px rgba(160,90,200,.35) inset; }
+#cardArea.negwave .card-name { color: #e59ad0; }
+#cardArea.negwave .card-desc { color: #d9b0e6; }
+#cardArea.negwave .card-title::after { content: '　⚠ 被扭曲'; color: #e07acb; font-size: 11px; }
 
 /* 隊伍 */
 .team-label, .card-title { font-size: 12px; color: #9fb2d6; margin-bottom: 5px; }

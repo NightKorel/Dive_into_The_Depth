@@ -67,14 +67,28 @@ const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
 let teamHp = TEAM_HP_MAX;
-let enemy = { name:'淵蟲', hpMax:55, hp:55, atkMin:4, atkMax:6, heavyMin:11, heavyMax:14, heavyEvery:3 };
-let eCount = 0, eNext = null;
-// 決定淵蟲「下一次」要做什麼（每第 heavyEvery 回合是預告重擊）
+// 負面波動（深淵共鳴污染下回合用）＝正面波動的鏡像：容量-2、順子÷2、爆擊÷2
+const NEG_WAVES = [
+  { name:'深淵擠壓', desc:'容量 -2', capBonus:-2, neg:true },
+  { name:'順子失序', desc:'順子加成 ÷2', straightMult:0.5, neg:true },
+  { name:'爆擊消解', desc:'爆擊率 ÷2', pairMult:0.5, neg:true },
+];
+function pickNegWave(){ return NEG_WAVES[Math.floor(Math.random()*NEG_WAVES.length)]; }
+
+// 敵人：行動用一條會循環的 pattern（normal 普攻／heavy 預告重擊／resonance 深淵共鳴）
+let enemy = {
+  name:'淵蟲', hpMax:55, hp:55, atkMin:4, atkMax:6,
+  heavyMin:11, heavyMax:14, resMin:2, resMax:3,
+  pattern:['normal','normal','heavy','normal','resonance','normal'],
+};
+let ePatIdx = -1, eNext = null, corruptNext = null;
+// 決定淵蟲「下一次」要做什麼（照 pattern，提前預告）
 function planEnemy(){
-  eCount++;
-  const heavy = (eCount % enemy.heavyEvery === 0);
-  eNext = heavy ? { type:'heavy', min:enemy.heavyMin, max:enemy.heavyMax }
-                : { type:'normal', min:enemy.atkMin, max:enemy.atkMax };
+  ePatIdx = (ePatIdx + 1) % enemy.pattern.length;
+  const kind = enemy.pattern[ePatIdx];
+  if(kind === 'heavy') eNext = { type:'heavy', min:enemy.heavyMin, max:enemy.heavyMax };
+  else if(kind === 'resonance') eNext = { type:'resonance', min:enemy.resMin, max:enemy.resMax, wave:pickNegWave() };
+  else eNext = { type:'normal', min:enemy.atkMin, max:enemy.atkMax };
 }
 let cardQueue = [], curCard = null, foreseeLeft = 0;
 let uid = 0, over = false;
@@ -162,7 +176,9 @@ function refill(){
 function startTurn(){
   if(over) return;
   refill();
-  curCard = drawCard();
+  // 被深淵共鳴污染 → 這回合波動強制變負面；否則正常抽
+  curCard = corruptNext ? corruptNext : drawCard();
+  corruptNext = null;
   if(foreseeLeft > 0) foreseeLeft--;
   render();
 }
@@ -245,15 +261,18 @@ function attack(){
 
 function enemyTurn(def){
   if(over) return;
-  const mv = eNext, heavy = mv.type === 'heavy';
+  const mv = eNext, heavy = mv.type === 'heavy', reson = mv.type === 'resonance';
+  // 深淵共鳴：污染下回合波動（這一步不看閃避，一定會發生）
+  if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c9a0ff">深淵共鳴</b>！下回合波動被扭曲成【${mv.wave.desc}】`); }
   const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
-  if(Math.random() > hitChance){ log(`敵人${heavy?'的重擊':''}攻擊 <b>落空</b>了！`); planEnemy(); startTurn(); return; }
+  if(Math.random() > hitChance){ log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''}攻擊 <b>落空</b>了！`); planEnemy(); startTurn(); return; }
   let dmg = def.minRoll ? mv.min
           : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
   const raw = dmg;
   dmg = Math.max(0, dmg - def.mitigate - def.flat);
   teamHp = Math.max(0, teamHp - dmg);
-  log(`淵蟲${heavy?'<b style="color:#ff6b6b">重擊</b>':'反擊'} ${raw}${(def.mitigate+def.flat)?`（減免 ${def.mitigate+def.flat}）`:''} → 受到 <b>${dmg}</b>`);
+  const label = heavy ? '<b style="color:#ff6b6b">重擊</b>' : reson ? '<b style="color:#c9a0ff">共鳴一擊</b>' : '反擊';
+  log(`淵蟲${label} ${raw}${(def.mitigate+def.flat)?`（減免 ${def.mitigate+def.flat}）`:''} → 受到 <b>${dmg}</b>`);
   render();
   if(teamHp <= 0){ finish(false); return; }
   planEnemy();
@@ -284,12 +303,14 @@ function render(){
   document.getElementById('enemyHpText').textContent = `${enemy.hp} / ${enemy.hpMax}`;
   const intentEl = document.getElementById('enemyIntent');
   if(eNext && eNext.type==='heavy'){ intentEl.className = 'intent heavy'; intentEl.innerHTML = `⚡ <b style="color:#ff6b6b">蓄力重擊！下回合造成 ${eNext.min}~${eNext.max} 點——快防禦/治療！</b>`; }
+  else if(eNext && eNext.type==='resonance'){ intentEl.className = 'intent reson'; intentEl.innerHTML = `🌀 <b style="color:#c9a0ff">深淵共鳴：造成 ${eNext.min}~${eNext.max} + 下回合波動變【${eNext.wave.desc}】</b>`; }
   else if(eNext){ intentEl.className = 'intent'; intentEl.textContent = `意圖：下回合攻擊 ${eNext.min}~${eNext.max} 點`; }
   // 隊伍
   document.getElementById('teamHpFill').style.width = (teamHp/TEAM_HP_MAX*100)+'%';
   document.getElementById('teamHpText').textContent = `${teamHp} / ${TEAM_HP_MAX}`;
   document.getElementById('heroRow').innerHTML = HEROES.map(h=>`<div class="hero" style="border-left:4px solid ${h.color}"><b style="color:${h.color}">${h.id}</b>${h.tiles.map(t=>SKILLS[t].num).join(' ')}</div>`).join('');
   // 波動卡
+  document.getElementById('cardArea').className = 'panel' + (curCard.neg ? ' negwave' : '');
   document.getElementById('cardName').textContent = curCard.name;
   document.getElementById('cardDesc').textContent = curCard.desc;
   const fs = document.getElementById('foresight');
