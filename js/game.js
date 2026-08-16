@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.48'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.49'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -388,6 +388,9 @@ function attack(){
    try {
     const tgt = focusEnemy();
     stamina = Math.max(0, stamina - spent); // 出擊扣體力＝排出去的數字總和（ALL IN 只是把容量拿掉、扣法一樣）
+    // 滿順獎勵：完美的 1-2-3-4-5 立刻退還它花的 15 體力＝變相不用錢、加速攢 ALL IN（爽點＝推向大爆發）。
+    // 稀缺當節流閥（用掉的五張進棄牌、卡池抽光才洗回）＝沒法每回合刷，不會爆。
+    if(isFull){ stamina = Math.min(STAMINA_MAX, stamina + 15); }
     allIn = false;
     // 單體攻擊打前排；打死還有剩的「溢出（overkill）」傷害接著打下一隻，不浪費
     let remain = total, overflow = 0;
@@ -402,7 +405,7 @@ function attack(){
     // 洞察：一張看接下來兩回合波動、不疊加（設 3＝startTurn 扣 1 後穩定顯示 2 回）
     if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
     flashEnemy(); // 打怪：只有敵人抖（flashEnemy 本身含位移），不震整個畫面
-    if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
+    if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); setTimeout(()=> floatNum('體力全退 +15', 'heal', 'team'), 360); log('✨ <b style="color:#ffe082">滿順</b>！體力全額退還（+15）'); }
     floatNum(total, crit?'crit':'');
     if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
     if(overflow > 0) setTimeout(()=> floatNum('溢出 '+overflow, 'spill'), 300); // 溢出傷害飄字（小小的、不強調）
