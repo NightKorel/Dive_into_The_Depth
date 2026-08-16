@@ -149,7 +149,14 @@ body {
 .tile:hover { transform: translateY(-3px); }
 /* 卡片上的字加一層很淡的小影子，讓白字在彩色底上更清楚（別太重＝別變醜） */
 .tile span { text-shadow: 0 1px 1.5px rgba(0,0,0,.45); }
-.tile .num { font-size: 22px; font-weight: 900; line-height: 1; }
+/* 數字＝小圓徽章（半透明深底＋細白邊）＝不靠顏色也醒目、像費用標記 */
+.tile .num {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.34); border: 1px solid rgba(255,255,255,.28);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.3);
+  font-size: 17px; font-weight: 900; line-height: 1;
+}
 .tile .nm { font-size: 10px; margin-top: 2px; }
 .tile .who { font-size: 9px; opacity: .7; }
 /* 依號碼分類上色 */
@@ -232,7 +239,7 @@ body.eff-on .tile {
 }
 body.eff-on .tile .who { display: none; }
 body.eff-on .tile .cnum { display: none; }
-body.eff-on .tile .num { grid-area: cnum; display: block; font-size: 15px; line-height: 1; }
+body.eff-on .tile .num { grid-area: cnum; width: 22px; height: 22px; font-size: 12.5px; }
 body.eff-on .tile .nm  { grid-area: name; margin: 0; font-size: 10.5px; }
 body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; overflow: hidden;
   font-size: 9px; line-height: 1.25; opacity: .9;
