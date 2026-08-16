@@ -20,7 +20,7 @@ const SKILLS = {
   風壓: { name:'風壓', num:2, desc:'本回合全體敵人造成傷害 -2', eff:{ enemyFlat:2 } },
   治癒: { name:'治癒', num:3, heal:3, desc:'回復 3 點血量' },
   隱忍: { name:'隱忍', num:3, desc:'本回合減傷 3', eff:{ mitigate:3 } },
-  蓄力: { name:'蓄力', num:4, desc:'本回合若打出5，總傷害 +3', eff:{ buffIf5:3 } },
+  蓄力: { name:'蓄力', num:4, desc:'本回合若打出5，總傷害 +4', eff:{ buffIf5:4 } },
   刀舞: { name:'刀舞', num:5, dmg:5, desc:'造成 5 點傷害' },
   精準: { name:'精準', num:2, desc:'每張打出的2(含隊友)使敵傷 -2', eff:{ jingzhun:2 } },
   格擋: { name:'格擋', num:3, desc:'本回合減傷 3', eff:{ mitigate:3 } },
@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.1'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.2'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
@@ -83,7 +83,7 @@ function pickNegWave(){ return NEG_WAVES[Math.floor(Math.random()*NEG_WAVES.leng
 function makeWorm(name, pattern){
   return {
     // 菁英戰的淵蟲：傷害比雜魚高一點（納可 2026-08-16）
-    name, hpMax:40, hp:40, atkMin:6, atkMax:8, heavyMin:15, heavyMax:18, resMin:4, resMax:5,
+    name, hpMax:40, hp:40, atkMin:6, atkMax:8, heavyMin:13, heavyMax:16, resMin:4, resMax:5,
     pattern, patIdx:-1, next:null, dead:false,
   };
 }
