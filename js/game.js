@@ -293,6 +293,20 @@ function render(){
   document.getElementById('calc').innerHTML = seq.length
     ? `基礎 <b>${sc.base}</b> ＋ 順子 <b>${sc.straight}</b>${sc.buff?` ＋ 增益 <b>${sc.buff}</b>`:''}　｜　爆擊率 <b>${sc.crit}%</b>　｜　預計 <b>${sc.preCrit}</b>${sc.crit?` ~ ${sc.preCrit*2}`:''}`
     : '把手牌點上來排序列……';
+  // 效果清單：把序列裡所有非傷害效果條列，讓玩家有感
+  const def = collectDef(seq);
+  let heal = 0; seq.forEach(t => heal += (t.skill.heal||0));
+  const effs = [];
+  if(heal) effs.push(`💚 治療 +${heal} 血`);
+  if(def.mitigate) effs.push(`🛡️ 本回合減傷 ${def.mitigate}`);
+  if(def.flat) effs.push(`🔻 敵方本回合傷害 -${def.flat}`);
+  if(def.minRoll) effs.push(`❄️ 敵人本回合骰最低傷害`);
+  if(def.accDown) effs.push(`🌫️ 敵命中 -${Math.round(def.accDown*100)}%`);
+  if(def.evade) effs.push(`💨 我方閃避 +${Math.round(def.evade*100)}%`);
+  if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) effs.push(`🔮 預知接下來的波動`);
+  document.getElementById('seqEff').innerHTML = seq.length
+    ? (effs.length ? '出擊會：' + effs.join('　') : '<span class="noeff">（這條沒有附帶效果，純輸出）</span>')
+    : '';
   document.getElementById('btnAttack').disabled = over || seq.length===0;
 }
 function floatNum(v, cls){

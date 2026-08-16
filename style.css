@@ -67,6 +67,8 @@ body {
 /* 試算 */
 .calc { margin-top: 8px; font-size: 13px; color: #cfe0ff; line-height: 1.6; }
 .calc b { color: #ffd35b; }
+.seqeff { margin-top: 6px; font-size: 12px; color: #bfe6d6; line-height: 1.7; }
+.seqeff .noeff { color: #8090a8; }
 
 /* 按鈕 */
 #btnBar { display: flex; gap: 8px; }
