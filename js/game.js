@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.11'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.12'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -255,7 +255,8 @@ function autoStraight(){
     }
     if(picked.length > best.length) best = picked;
   }
-  best.forEach(t=>{ const i=hand.indexOf(t); if(i>=0){ hand.splice(i,1); seq.push(t); } });
+  // 排成降冪（數字大的在前，跟一鍵對子一致）——順子升降都算分，純顯示一致性
+  best.reverse().forEach(t=>{ const i=hand.indexOf(t); if(i>=0){ hand.splice(i,1); seq.push(t); } });
   render();
 }
 // 一鍵對子：笨笨地把同號的疊在一起（塞得下就放）
@@ -306,7 +307,15 @@ function attack(){
     const tgt = focusEnemy();
     stamina = Math.max(0, stamina - spent); // 出擊扣體力＝排出去的數字總和（ALL IN 只是把容量拿掉、扣法一樣）
     allIn = false;
-    tgt.hp = Math.max(0, tgt.hp - total);
+    // 單體攻擊打前排；打死還有剩的「溢出（overkill）」傷害接著打下一隻，不浪費
+    let remain = total, overflow = 0;
+    const hitOrder = [tgt, ...aliveEnemies().filter(e => e !== tgt)];
+    for(const e of hitOrder){
+      if(remain <= 0) break;
+      const d = Math.min(remain, e.hp);
+      e.hp = Math.max(0, e.hp - d); remain -= d;
+      if(e !== tgt) overflow += d;
+    }
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
     // 洞察：只看下一回合波動、不疊加（波動牌庫小、看太多回會太強）
     if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 2;
@@ -314,9 +323,10 @@ function attack(){
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
     if(heal) setTimeout(()=> floatNum('+'+heal, 'heal', 'team'), 220);
+    if(overflow > 0) setTimeout(()=> floatNum('溢出 '+overflow, 'crit'), 260); // 溢出傷害飄字
     let killMsg = '';
-    if(tgt.hp <= 0 && !tgt.dead){ tgt.dead = true; killMsg = ' <b style="color:#ff9a9a">淵蟲倒下！</b>'; }
-    log(`出擊！造成 <b>${total}</b> 傷害${isFull?' <b style="color:#ffdf6b">✨滿順✨</b>':''}${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${heal?`，回復 ${heal} 血`:''}${killMsg}`);
+    enemies.forEach(e => { if(e.hp <= 0 && !e.dead){ e.dead = true; killMsg += ' <b style="color:#ff9a9a">淵蟲倒下！</b>'; } });
+    log(`出擊！造成 <b>${total}</b> 傷害${isFull?' <b style="color:#ffdf6b">✨滿順✨</b>':''}${crit?' <b style="color:#ff6b6b">爆擊！</b>':''}${overflow?` （溢出 <b>${overflow}</b> 打到下一隻）`:''}${heal?`，回復 ${heal} 血`:''}${killMsg}`);
     seq.forEach(t => discard.push(t)); seq = [];
     // 注意：animating 保持 true，鎖到「敵人反擊→新回合抽牌」全部跑完（在 startTurn 才解鎖），避免空檔重複出擊
     if(aliveEnemies().length === 0){ render(); finish(true); return; }
