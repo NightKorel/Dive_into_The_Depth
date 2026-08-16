@@ -219,13 +219,16 @@ body {
 /* 卡牌詳細效果：OFF 維持原樣（58×58 置中）；ON 換成「左上數字＋旁名字＋下描述」的固定大卡。
    兩種模式各自尺寸鎖死、所有卡一致，不會大小不一。 */
 .tile .eff { display: none; }
+.tile .cnum { display: none; }
+/* ON：上面「❶ 技能名」一行，底下整塊都是描述（描述字不縮、要看得清楚）；不顯示角色名（顏色已夠分辨） */
 body.eff-on .tile {
   display: grid; width: 74px; height: 74px; padding: 4px 5px; box-sizing: border-box;
-  grid-template-columns: auto 1fr; grid-template-rows: auto auto 1fr;
-  grid-template-areas: "num name" "num who" "eff eff";
-  column-gap: 4px; text-align: left; justify-content: initial; align-items: initial;
+  grid-template-columns: auto 1fr; grid-template-rows: auto 1fr;
+  grid-template-areas: "cnum name" "eff eff";
+  column-gap: 4px; row-gap: 2px; text-align: left; justify-content: initial; align-items: center;
 }
-body.eff-on .tile .num { grid-area: num; align-self: center; font-size: 20px; }
-body.eff-on .tile .nm  { grid-area: name; align-self: end; margin: 0; font-size: 10px; }
-body.eff-on .tile .who { grid-area: who; align-self: start; font-size: 7.5px; }
-body.eff-on .tile .eff { grid-area: eff; display: block; overflow: hidden; margin-top: 1px; font-size: 7.5px; line-height: 1.12; opacity: .82; }
+body.eff-on .tile .num { display: none; }
+body.eff-on .tile .who { display: none; }
+body.eff-on .tile .cnum { grid-area: cnum; display: block; font-size: 15px; line-height: 1; }
+body.eff-on .tile .nm  { grid-area: name; margin: 0; font-size: 10.5px; }
+body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; overflow: hidden; font-size: 9px; line-height: 1.18; opacity: .9; }
