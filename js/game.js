@@ -52,7 +52,7 @@ const HERO_COLOR = {}; HEROES.forEach(h => HERO_COLOR[h.id] = h);
 // ---------- 設定（改名／改主角色／顯示卡牌詳細效果；存 localStorage） ----------
 const SETTINGS_KEY = 'yuan2_settings';
 // playerName＝全名（劇情/其他地方角色叫的名字）；battleNick＝戰鬥暱稱（≤2 字，戰鬥介面只顯示這個）
-let settings = { playerName:'', battleNick:'', heroColor:'#E8A63C', showTileEff:true };
+let settings = { playerName:'', battleNick:'', heroColor:'#E8A63C', showTileEff:true, handSort:'asc' }; // handSort: 手牌排序 asc=小→大(預設) / desc=大→小
 function loadSettings(){ try{ const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); if(s && typeof s==='object') Object.assign(settings, s); }catch(e){} }
 function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
 // 主角顯示名：內部識別仍用 '主角'（磚的 who、顏色查表都靠它）。
@@ -89,7 +89,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.31'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.32'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -503,7 +503,8 @@ function render(){
     for(let k=1; k<foreseeLeft && k<cardQueue.length; k++) list.push(cardQueue[k].name); // 後續順著波動牌庫peek
     fs.textContent = `🔮 洞察（可見 ${foreseeLeft} 回）：` + list.join(' → ');
   } else fs.textContent = '';
-  // 手牌
+  // 手牌：照數字排序（設定可選小→大／大→小，預設小→大）。直接排 hand 陣列＝點擊的 index 仍對得上。
+  hand.sort((a,b)=> settings.handSort === 'desc' ? b.skill.num - a.skill.num : a.skill.num - b.skill.num);
   const hSlots = document.getElementById('handTiles'); hSlots.innerHTML='';
   hand.forEach((t,i)=> hSlots.appendChild(tileEl(t, ()=>toSeq(i))));
   // 出招帶（＋試算＋效果清單）另外抽成 renderSeqBar，拖動排序時只重畫這塊
@@ -658,11 +659,13 @@ function renderSettings(){
     + `<div class="set-row"><label>主角代表色</label><input type="color" id="setColor" value="${settings.heroColor}"></div>`
     + `<div class="set-row toggle" id="setEffRow"><label>顯示卡牌詳細效果</label><span class="switch ${settings.showTileEff?'on':''}">${settings.showTileEff?'開':'關'}</span></div>`
     + `<div class="set-hint">效果字很小、顯示在每張磚下方；新手建議開著（關掉版面更簡潔，滑鼠指上去仍看得到）。</div>`
+    + `<div class="set-row toggle" id="setSortRow"><label>手牌排序</label><span class="switch on">${settings.handSort==='desc'?'大 → 小':'小 → 大'}</span></div>`
     + `<button class="modal-close" id="setClose">關閉</button>`;
   document.getElementById('setName').oninput = e => { settings.playerName = e.target.value; document.getElementById('setNick').placeholder = (e.target.value.trim().slice(0,2) || '主角'); saveSettings(); render(); };
   document.getElementById('setNick').oninput = e => { settings.battleNick = e.target.value; saveSettings(); render(); };
   document.getElementById('setColor').oninput = e => { settings.heroColor = e.target.value; applyHeroColor(); saveSettings(); render(); };
   document.getElementById('setEffRow').onclick = () => { settings.showTileEff = !settings.showTileEff; applyTileEff(); saveSettings(); renderSettings(); };
+  document.getElementById('setSortRow').onclick = () => { settings.handSort = settings.handSort==='desc' ? 'asc' : 'desc'; saveSettings(); render(); renderSettings(); };
   document.getElementById('setClose').onclick = closeModal;
 }
 
