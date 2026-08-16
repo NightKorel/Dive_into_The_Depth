@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.10'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.11'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -88,7 +88,7 @@ function pickNegWave(){ return NEG_WAVES[Math.floor(Math.random()*NEG_WAVES.leng
 function makeWorm(name, pattern){
   return {
     // 菁英戰的淵蟲：傷害比雜魚高一點（納可 2026-08-16）
-    name, hpMax:40, hp:40, atkMin:6, atkMax:8, heavyMin:13, heavyMax:16, resMin:4, resMax:5,
+    name, hpMax:40, hp:40, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4,
     pattern, patIdx:-1, next:null, dead:false,
   };
 }
