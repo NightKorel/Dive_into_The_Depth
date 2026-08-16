@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.37'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.38'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -678,38 +678,57 @@ function flash(msg){ log(msg); }
 function toggleMenu(){ document.getElementById('menuPop').classList.toggle('show'); }
 function openSettings(){
   document.getElementById('menuPop').classList.remove('show');
+  settingsView = 'main';
   renderSettings();
   document.getElementById('modalMask').classList.add('show');
 }
 function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
+let settingsView = 'main'; // main / name / color
 function renderSettings(){
-  const nameEsc = String(settings.playerName).replace(/"/g,'&quot;');
-  const nickEsc = String(settings.battleNick).replace(/"/g,'&quot;');
-  const nickPh = (String(settings.playerName).trim().slice(0,2) || '主角'); // 暱稱空白時的預設＝全名前 2 字
-  document.getElementById('settingsModal').innerHTML =
-    `<h3>設定</h3>`
-    + `<div class="set-row"><label>主角名字</label><input type="text" id="setName" maxlength="8" value="${nameEsc}" placeholder="主角"></div>`
-    + `<div class="set-row"><label>戰鬥暱稱（2 字內）</label><input type="text" id="setNick" maxlength="2" value="${nickEsc}" placeholder="${nickPh}"></div>`
-    + `<div class="set-hint">「主角名字」＝劇情裡和其他地方角色叫你的名字；「戰鬥暱稱」＝戰鬥介面顯示用（最多 2 字）。暱稱留空就自動取名字前 2 個字。</div>`
-    + (()=>{ const c = hexToHsl(settings.heroColor); return `<div class="set-colorbox">`
-        + `<div class="set-row" style="margin-bottom:8px;"><label>主角代表色</label><span id="setColorPrev" class="color-prev" style="background:${settings.heroColor}"></span></div>`
-        + `<input type="range" id="setHue" class="hue" min="0" max="360" value="${c.h}">`
-        + `<input type="range" id="setSat" class="sl" min="0" max="100" value="${c.s}">`
-        + `<input type="range" id="setLit" class="sl" min="20" max="80" value="${c.l}">`
-        + `</div>`; })()
+  const m = document.getElementById('settingsModal');
+  if(settingsView === 'name'){
+    const nameEsc = String(settings.playerName).replace(/"/g,'&quot;');
+    const nickEsc = String(settings.battleNick).replace(/"/g,'&quot;');
+    const nickPh = (String(settings.playerName).trim().slice(0,2) || '主角');
+    m.innerHTML = `<h3>主角名字</h3>`
+      + `<div class="set-row"><label>主角名字</label><input type="text" id="setName" maxlength="8" value="${nameEsc}" placeholder="主角"></div>`
+      + `<div class="set-row"><label>戰鬥暱稱（2 字內）</label><input type="text" id="setNick" maxlength="2" value="${nickEsc}" placeholder="${nickPh}"></div>`
+      + `<div class="set-hint">「主角名字」＝劇情裡和其他地方角色叫你的名字；「戰鬥暱稱」＝戰鬥介面顯示用（最多 2 字）。暱稱留空就自動取名字前 2 個字。</div>`
+      + `<button class="modal-close" id="setBack">← 返回</button>`;
+    document.getElementById('setName').oninput = e => { settings.playerName = e.target.value; document.getElementById('setNick').placeholder = (e.target.value.trim().slice(0,2) || '主角'); saveSettings(); render(); };
+    document.getElementById('setNick').oninput = e => { settings.battleNick = e.target.value; saveSettings(); render(); };
+    document.getElementById('setBack').onclick = () => { settingsView='main'; renderSettings(); };
+    return;
+  }
+  if(settingsView === 'color'){
+    const c = hexToHsl(settings.heroColor);
+    m.innerHTML = `<h3>主角代表色</h3>`
+      + `<div class="set-colorbox">`
+      + `<div class="set-row" style="margin-bottom:8px;"><label>預覽</label><span id="setColorPrev" class="color-prev" style="background:${settings.heroColor}"></span></div>`
+      + `<label class="slabel">色相</label><input type="range" id="setHue" class="hue" min="0" max="360" value="${c.h}">`
+      + `<label class="slabel">濃淡</label><input type="range" id="setSat" class="sl" min="0" max="100" value="${c.s}">`
+      + `<label class="slabel">明暗</label><input type="range" id="setLit" class="sl" min="20" max="80" value="${c.l}">`
+      + `</div>`
+      + `<button class="modal-close" id="setBack">← 返回</button>`;
+    const upColor = () => {
+      const h = +document.getElementById('setHue').value, s = +document.getElementById('setSat').value, l = +document.getElementById('setLit').value;
+      settings.heroColor = hslToHex(h, s, l);
+      document.getElementById('setColorPrev').style.background = settings.heroColor;
+      applyHeroColor(); saveSettings(); render();
+    };
+    ['setHue','setSat','setLit'].forEach(id => document.getElementById(id).oninput = upColor);
+    document.getElementById('setBack').onclick = () => { settingsView='main'; renderSettings(); };
+    return;
+  }
+  // 主頁
+  m.innerHTML = `<h3>設定</h3>`
+    + `<div class="set-row nav" id="navName"><label>更改主角名字／暱稱</label><span class="nav-arrow">›</span></div>`
+    + `<div class="set-row nav" id="navColor"><label>更改主角代表色</label><span class="nav-arrow" style="color:${settings.heroColor}">›</span></div>`
     + `<div class="set-row toggle" id="setEffRow"><label>顯示卡牌詳細效果</label><span class="switch ${settings.showTileEff?'on':''}">${settings.showTileEff?'開':'關'}</span></div>`
-    + `<div class="set-hint">效果字很小、顯示在每張磚下方；新手建議開著（關掉版面更簡潔，滑鼠指上去仍看得到）。</div>`
     + `<div class="set-row toggle" id="setSortRow"><label>手牌排序</label><span class="switch on">${settings.handSort==='desc'?'大 → 小':'小 → 大'}</span></div>`
     + `<button class="modal-close" id="setClose">關閉</button>`;
-  document.getElementById('setName').oninput = e => { settings.playerName = e.target.value; document.getElementById('setNick').placeholder = (e.target.value.trim().slice(0,2) || '主角'); saveSettings(); render(); };
-  document.getElementById('setNick').oninput = e => { settings.battleNick = e.target.value; saveSettings(); render(); };
-  const upColor = () => {
-    const h = +document.getElementById('setHue').value, s = +document.getElementById('setSat').value, l = +document.getElementById('setLit').value;
-    settings.heroColor = hslToHex(h, s, l);
-    document.getElementById('setColorPrev').style.background = settings.heroColor;
-    applyHeroColor(); saveSettings(); render();
-  };
-  ['setHue','setSat','setLit'].forEach(id => document.getElementById(id).oninput = upColor);
+  document.getElementById('navName').onclick = () => { settingsView='name'; renderSettings(); };
+  document.getElementById('navColor').onclick = () => { settingsView='color'; renderSettings(); };
   document.getElementById('setEffRow').onclick = () => { settings.showTileEff = !settings.showTileEff; applyTileEff(); saveSettings(); renderSettings(); };
   document.getElementById('setSortRow').onclick = () => { settings.handSort = settings.handSort==='desc' ? 'asc' : 'desc'; saveSettings(); render(); renderSettings(); };
   document.getElementById('setClose').onclick = closeModal;

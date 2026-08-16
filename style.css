@@ -268,6 +268,11 @@ body {
 .set-colorbox input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #34406a; box-shadow: 0 1px 3px rgba(0,0,0,.5); cursor: pointer; }
 .set-colorbox input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #34406a; cursor: pointer; }
 .set-row.toggle { cursor: pointer; }
+/* 進子頁的入口列：整列可點、右邊一個箭頭 */
+.set-row.nav { cursor: pointer; padding: 4px 0; }
+.set-row.nav:hover label { color: #fff; }
+.set-row.nav .nav-arrow { font-size: 22px; color: #9fb0cf; line-height: 1; }
+.slabel { display: block; font-size: 11px; color: #9fb0cf; margin: 6px 0 1px; }
 .set-row.toggle .switch { font-size: 13px; font-weight: bold; padding: 4px 14px; border-radius: 12px; background: #33405f; color: #9fb0cf; }
 .set-row.toggle .switch.on { background: linear-gradient(90deg,#2e8b6f,#4fd1a5); color: #06231a; }
 .set-hint { font-size: 11px; color: #8090ac; line-height: 1.5; margin: -4px 0 14px; }
