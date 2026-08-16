@@ -11,7 +11,19 @@
 <!-- 左上角選單 -->
 <button id="btnMenu" title="選單">☰</button>
 <div id="menuPop" class="menu-pop">
+  <button id="menuLevels">🗺 選關</button>
   <button id="menuSettings">⚙ 設定</button>
+</div>
+
+<!-- 選關畫面 -->
+<div id="levelSelect" class="level-select">
+  <div class="ls-panel">
+    <div class="ls-title">選擇戰鬥</div>
+    <div class="ls-hint">現在都是「淵蟲」，只差體型／強度（調基礎難度用）</div>
+    <button class="ls-btn" data-key="small"><span class="ls-name">小怪戰</span><span class="ls-sub">小淵蟲 ×2</span></button>
+    <button class="ls-btn" data-key="elite"><span class="ls-name">⚔ 菁英戰</span><span class="ls-sub">大淵蟲 ×2</span></button>
+    <button class="ls-btn" data-key="boss"><span class="ls-name">👑 Boss 戰</span><span class="ls-sub">淵蟲王 ×1</span></button>
+  </div>
 </div>
 <!-- 設定視窗 -->
 <div id="modalMask" class="modal-mask"><div class="modal" id="settingsModal"></div></div>

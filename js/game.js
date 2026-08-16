@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.41'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.42'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -130,17 +130,29 @@ function pickNegWave(){ return NEG_WAVES[Math.floor(Math.random()*NEG_WAVES.leng
 // 敵人：一場可以有多隻，全部同時在場、都會攻擊你；單體攻擊打「前排 focus」，前排死了自動換下一隻。
 // 行動用一條會循環的 pattern（normal 普攻／heavy 預告重擊／resonance 深淵共鳴）。
 // 兩隻一起打＝傷害會疊，所以每隻比單隻弱（不是一隻硬 ×2）。
-function makeWorm(name, pattern){
-  return {
-    // 菁英戰的淵蟲：傷害比雜魚高一點（納可 2026-08-16）
-    name, hpMax:40, hp:40, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4,
-    pattern, patIdx:-1, next:null, dead:false,
-  };
+// stats＝{hpMax,atkMin,atkMax,heavyMin,heavyMax,resMin,resMax}；現在三種戰鬥都是「淵蟲」，只差體型/強度（納可 2026-08-16：先只調基礎難度、名字都叫淵蟲）
+function makeWorm(name, pattern, stats){
+  return Object.assign({ name, hp:stats.hpMax, pattern, patIdx:-1, next:null, dead:false }, stats);
 }
-let enemies = [
-  makeWorm('淵蟲', ['normal','normal','heavy','normal','resonance','normal']),
-  makeWorm('淵蟲', ['normal','resonance','normal','heavy','normal','normal']), // pattern 錯開，重擊不會同回合
-];
+// pattern 錯開＝兩隻重擊不會同回合
+const PAT_A = ['normal','normal','heavy','normal','resonance','normal'];
+const PAT_B = ['normal','resonance','normal','heavy','normal','normal'];
+// 選關：三種戰鬥（數值都是佔位、待小艾校準）
+const BATTLES = {
+  small: { tier:'小怪戰', intro:'幾隻小淵蟲竄了出來。', make:()=>[
+    makeWorm('小淵蟲', PAT_A, { hpMax:22, atkMin:4, atkMax:6, heavyMin:8,  heavyMax:10, resMin:2, resMax:3 }),
+    makeWorm('小淵蟲', PAT_B, { hpMax:22, atkMin:4, atkMax:6, heavyMin:8,  heavyMax:10, resMin:2, resMax:3 }),
+  ]},
+  elite: { tier:'⚔ 菁英戰', intro:'兩隻大淵蟲擋在前方。', make:()=>[
+    makeWorm('大淵蟲', PAT_A, { hpMax:40, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
+    makeWorm('大淵蟲', PAT_B, { hpMax:40, atkMin:5, atkMax:7, heavyMin:11, heavyMax:14, resMin:3, resMax:4 }),
+  ]},
+  boss:  { tier:'👑 Boss 戰', intro:'淵蟲王從深處升起。', make:()=>[
+    makeWorm('淵蟲王', ['normal','heavy','normal','resonance','normal','heavy'],
+      { hpMax:110, atkMin:8, atkMax:11, heavyMin:18, heavyMax:22, resMin:5, resMax:6 }),
+  ]},
+};
+let enemies = [];
 let focusIdx = 0, corruptNext = null;
 function focusEnemy(){ return enemies[focusIdx]; }
 function aliveEnemies(){ return enemies.filter(e => !e.dead); }
@@ -444,8 +456,9 @@ function enemyTurn(def){
 function finish(won){
   over = true;
   document.getElementById('btnAttack').disabled = true;
-  log(won ? '<span class="win">淵蟲群被清光了！勝利！（重新整理再玩一場）</span>'
-          : '<span class="lose">全隊倒下了……（重新整理再玩一場）</span>');
+  log(won ? '<span class="win">淵蟲群被清光了！勝利！（☰ 選單 → 選關 再打一場）</span>'
+          : '<span class="lose">全隊倒下了……（☰ 選單 → 選關 再打一場）</span>');
+  setTimeout(showLevelSelect, 1400); // 打完自動叫出選關
 }
 
 // ---------- 畫面 ----------
@@ -753,10 +766,34 @@ function init(){
   document.addEventListener('pointerup', onDragEnd);
   document.addEventListener('pointercancel', onDragEnd);
   document.getElementById('version').textContent = VERSION;
-  document.getElementById('battleTier').textContent = '⚔ 菁英戰';
+  document.getElementById('menuLevels').onclick = () => { toggleMenu(); showLevelSelect(); };
+  document.querySelectorAll('#levelSelect .ls-btn').forEach(b => {
+    b.onclick = () => startBattle(b.dataset.key);
+  });
+  showLevelSelect(); // 開場先選關，不直接開打
+}
+
+// 顯示/關閉選關畫面
+function showLevelSelect(){ document.getElementById('levelSelect').classList.add('show'); }
+function hideLevelSelect(){ document.getElementById('levelSelect').classList.remove('show'); }
+
+// 開一場戰鬥（key＝small/elite/boss）＝把整個戰鬥狀態重置，選關可隨時重開一場、不用重新整理
+function startBattle(key){
+  const cfg = BATTLES[key]; if(!cfg) return;
+  hideLevelSelect();
+  enemies = cfg.make();
+  focusIdx = 0; corruptNext = null;
+  teamHp = TEAM_HP_MAX; stamina = 0; allIn = false;
+  pool = []; hand = []; seq = []; discard = [];
+  cardQueue = []; curCard = null; foreseeLeft = 0;
+  firstTurn = true; over = false; animating = false;
+  logLines = [];
+  document.getElementById('btnAttack').disabled = false;
+  document.getElementById('battleTier').textContent = cfg.tier;
+  document.getElementById('enemyRow').innerHTML = ''; // 逼 render 依新敵人數重建敵人卡
   buildPool();
   enemies.forEach(e => planEnemy(e));
   startTurn();
-  log('潛淵深處，兩隻淵蟲擋在前方。排出你的招式吧。');
+  log(cfg.intro + ' 排出你的招式吧。');
 }
 init();
