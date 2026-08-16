@@ -26,6 +26,7 @@ body {
 
 /* 敵人 */
 #enemyArea { position: relative; text-align: center; }
+#battleTier { font-size: 13px; font-weight: bold; color: #d9a5ff; letter-spacing: 2px; margin-bottom: 8px; text-shadow: 0 0 6px rgba(180,120,220,.5); }
 #enemyRow { display: flex; gap: 16px; justify-content: center; align-items: flex-start; }
 .enemy-card { flex: 0 1 200px; transition: transform .4s ease, opacity .4s ease, filter .4s ease; }
 .enemy-card.focus { transform: scale(1.06); animation: enemyEnter .45s ease; }

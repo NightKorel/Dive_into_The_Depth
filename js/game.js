@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'V0.052'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
+const VERSION = 'V0.06'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
@@ -82,7 +82,8 @@ function pickNegWave(){ return NEG_WAVES[Math.floor(Math.random()*NEG_WAVES.leng
 // 兩隻一起打＝傷害會疊，所以每隻比單隻弱（不是一隻硬 ×2）。
 function makeWorm(name, pattern){
   return {
-    name, hpMax:40, hp:40, atkMin:5, atkMax:7, heavyMin:13, heavyMax:16, resMin:3, resMax:4,
+    // 菁英戰的淵蟲：傷害比雜魚高一點（納可 2026-08-16）
+    name, hpMax:40, hp:40, atkMin:6, atkMax:8, heavyMin:15, heavyMax:18, resMin:4, resMax:5,
     pattern, patIdx:-1, next:null, dead:false,
   };
 }
@@ -562,6 +563,7 @@ function init(){
   document.addEventListener('pointerup', onDragEnd);
   document.addEventListener('pointercancel', onDragEnd);
   document.getElementById('version').textContent = VERSION;
+  document.getElementById('battleTier').textContent = '⚔ 菁英戰';
   buildPool();
   enemies.forEach(e => planEnemy(e));
   startTurn();
