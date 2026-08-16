@@ -64,7 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'V0.04'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
+const VERSION = 'V0.05'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
@@ -252,8 +252,8 @@ function autoPair(){
   if(animating) return;
   clearSeq();
   const byNum = {}; hand.forEach(t=>{ (byNum[t.skill.num]=byNum[t.skill.num]||[]).push(t); });
-  // 找數量最多的那個號碼優先疊
-  const order = Object.keys(byNum).sort((a,b)=> byNum[b].length - byNum[a].length);
+  // 同號疊在一起，多組時「數字大的排前面」＝降冪（例 55、22 → 5522 不是 2255）
+  const order = Object.keys(byNum).sort((a,b)=> Number(b) - Number(a));
   let sum=0;
   order.forEach(n=>{
     byNum[n].forEach(t=>{ if(sum + t.skill.num <= currentCap()){ const i=hand.indexOf(t); if(i>=0){ hand.splice(i,1); seq.push(t); sum+=t.skill.num; } } });
@@ -294,7 +294,8 @@ function attack(){
     const tgt = focusEnemy();
     tgt.hp = Math.max(0, tgt.hp - total);
     if(heal) teamHp = Math.min(TEAM_HP_MAX, teamHp + heal);
-    if(seq.some(t=>t.skill.eff && t.skill.eff.foresight)) foreseeLeft = 3;
+    const foresightN = seq.filter(t=>t.skill.eff && t.skill.eff.foresight).length; // 每張洞察 +2 回合、可累加
+    if(foresightN) foreseeLeft = Math.min(8, foreseeLeft + 2*foresightN);
     shake(crit || isFull); flashEnemy();
     if(isFull){ goldBurst(); floatNum('✨ 滿順 ✨', 'full'); }
     floatNum(total, crit?'crit':'');
@@ -407,14 +408,15 @@ function render(){
   document.getElementById('cardDesc').textContent = curCard.desc;
   const fs = document.getElementById('foresight');
   if(foreseeLeft > 0){
-    // 洞察的價值：把共鳴「污染成什麼」看穿（共鳴意圖本身只寫「污染波動」）
-    let nextWave;
-    if(corruptNext) nextWave = corruptNext.desc + '（污染）';
+    // 洞察：看穿接下來 foreseeLeft 回合的波動（含把共鳴污染成什麼看穿）
+    const list = [];
+    if(corruptNext) list.push(corruptNext.desc + '(污染)');
     else {
       const r = aliveEnemies().find(e => e.next && e.next.type === 'resonance');
-      nextWave = r ? ('被污染成 ' + r.next.wave.desc) : (cardQueue[0] ? cardQueue[0].name : '未知');
+      list.push(r ? ('被污染成 ' + r.next.wave.desc) : (cardQueue[0] ? cardQueue[0].name : '平靜'));
     }
-    fs.textContent = '🔮 洞察：下回合波動 → ' + nextWave;
+    for(let k=1; k<foreseeLeft && k<cardQueue.length; k++) list.push(cardQueue[k].name); // 後續順著波動牌庫peek
+    fs.textContent = `🔮 洞察（可見 ${foreseeLeft} 回）：` + list.join(' → ');
   } else fs.textContent = '';
   // 手牌
   const hSlots = document.getElementById('handTiles'); hSlots.innerHTML='';
