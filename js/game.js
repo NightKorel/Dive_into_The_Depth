@@ -54,8 +54,14 @@ const SETTINGS_KEY = 'yuan2_settings';
 let settings = { playerName:'主角', heroColor:'#E8A63C', showTileEff:true };
 function loadSettings(){ try{ const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); if(s && typeof s==='object') Object.assign(settings, s); }catch(e){} }
 function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
-// 主角改名：內部識別仍用 '主角'（磚的 who、顏色查表都靠它），只有「顯示」換成玩家取的名字
-function displayName(id){ return id === '主角' ? (String(settings.playerName).trim() || '主角') : id; }
+// 主角改名：內部識別仍用 '主角'（磚的 who、顏色查表都靠它），只有「顯示」換成玩家取的名字。
+// 戰鬥中各處只顯示名字的「第一個字」（長名字才不會撐爆磚/角色方塊）；沒取名時維持預設「主角」。
+// ⚠️ 之後做「玩家取名」流程時要提醒玩家：戰鬥中只會顯示第一個字。
+function displayName(id){
+  if(id !== '主角') return id;
+  const nm = String(settings.playerName).trim();
+  return nm ? nm.charAt(0) : '主角';
+}
 // 依主角選的色，自動算一個較深的底色（磚的漸層用）
 function darken(hex, f=0.55){
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex); if(!m) return '#333';
@@ -81,7 +87,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.16'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.17'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
