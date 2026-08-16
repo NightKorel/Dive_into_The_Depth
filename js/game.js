@@ -1,5 +1,6 @@
 /* ============================================================
-   潛淵 — 戰鬥磚塊制原型（第一版）
+   潛淵 · 淵2 — 戰鬥磚塊制原型
+   VERSION：每次有感更新就 +0.01（規則見 CLAUDE.md）；粗胚階段用 V0.0X。
    實裝設計文件 設計文件/戰鬥磚塊制_設計.md §13。
    純前端、無框架。改完重新整理瀏覽器即可。
 
@@ -63,6 +64,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
+const VERSION = 'V0.03'; // ← 有感更新 +0.01；很小的微調 +0.001（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40;
 const DECK_COPIES = 2; // 每張磚在池子的份數（納可 playtest：×2 拉長循環、別兩回合就輪完一遍；之後可再調）
 let pool = [], hand = [], seq = [], discard = [];
@@ -108,6 +110,7 @@ function planEnemy(e){
 }
 let cardQueue = [], curCard = null, foreseeLeft = 0;
 let uid = 0, over = false;
+let watchdog = null; // 卡住自動恢復用的計時器
 
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
@@ -211,6 +214,7 @@ function startTurn(){
   corruptNext = null;
   if(foreseeLeft > 0) foreseeLeft--;
   animating = false; dragSession = null; draggingUid = null; // 新回合就緒，解鎖並清掉殘留拖動狀態
+  clearTimeout(watchdog); // 正常進到新回合＝沒卡住，取消看門狗
   render();
 }
 
@@ -271,6 +275,16 @@ function attack(){
   // 出擊動畫：磚一塊塊亮
   animating = true;
   document.getElementById('btnAttack').disabled = true;
+  // 看門狗：萬一流程哪裡沒解鎖，4 秒後自動恢復，不讓玩家卡死
+  clearTimeout(watchdog);
+  watchdog = setTimeout(()=>{
+    if(animating && !over){
+      log('⚠ 偵測到卡住，已自動恢復（若常發生請跟我說剛剛怎麼操作的）');
+      animating = false; dragSession = null; draggingUid = null;
+      if(hand.length < HAND_MAX) refill();
+      render();
+    }
+  }, 4000);
   const els = [...document.getElementById('seqSlots').children];
   els.forEach((el,i)=> setTimeout(()=> el.classList.add('firing'), i*110));
   const wait = els.length*110 + 260;
@@ -545,6 +559,7 @@ function init(){
   document.addEventListener('pointermove', onDragMove);
   document.addEventListener('pointerup', onDragEnd);
   document.addEventListener('pointercancel', onDragEnd);
+  document.getElementById('version').textContent = VERSION;
   buildPool();
   enemies.forEach(e => planEnemy(e));
   startTurn();
