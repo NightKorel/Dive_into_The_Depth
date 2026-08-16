@@ -213,7 +213,16 @@ body {
 .modal-close { width: 100%; padding: 9px; border: none; border-radius: 8px; background: #38466e; color: #dfe6f5; cursor: pointer; font-size: 14px; }
 .modal-close:hover { background: #45558a; }
 
-/* 卡牌詳細效果：很小的字、顯示在磚下方；預設由 body.eff-on 控制 */
+/* 卡牌詳細效果：OFF 維持原樣（58×58 置中）；ON 換成「左上數字＋旁名字＋下描述」的固定大卡。
+   兩種模式各自尺寸鎖死、所有卡一致，不會大小不一。 */
 .tile .eff { display: none; }
-body.eff-on .tile { height: auto; min-height: 58px; padding: 5px 3px 4px; justify-content: flex-start; }
-body.eff-on .tile .eff { display: block; font-size: 8px; line-height: 1.15; margin-top: 3px; opacity: .82; text-align: center; word-break: break-word; }
+body.eff-on .tile {
+  display: grid; width: 104px; height: 74px; padding: 5px 8px; box-sizing: border-box;
+  grid-template-columns: auto 1fr; grid-template-rows: auto auto 1fr;
+  grid-template-areas: "num name" "num who" "eff eff";
+  column-gap: 6px; text-align: left; justify-content: initial; align-items: initial;
+}
+body.eff-on .tile .num { grid-area: num; align-self: center; font-size: 24px; }
+body.eff-on .tile .nm  { grid-area: name; align-self: end; margin: 0; font-size: 11px; }
+body.eff-on .tile .who { grid-area: who; align-self: start; font-size: 8px; }
+body.eff-on .tile .eff { grid-area: eff; display: block; overflow: hidden; margin-top: 2px; font-size: 8.5px; line-height: 1.14; opacity: .82; }
