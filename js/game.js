@@ -64,6 +64,26 @@ function displayName(id){
   const full = String(settings.playerName).trim();
   return full ? full.slice(0,2) : '主角';
 }
+// HSL <-> HEX（自訂色盤用：三條拖桿選色，不跳原生色盤＝沒有快速選色色塊）
+function hslToHex(h, s, l){
+  s/=100; l/=100;
+  const k = n => (n + h/30) % 12;
+  const a = s * Math.min(l, 1-l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n), 1)));
+  const to = x => Math.round(x*255).toString(16).padStart(2,'0');
+  return '#' + to(f(0)) + to(f(8)) + to(f(4));
+}
+function hexToHsl(hex){
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex); if(!m) return {h:38,s:78,l:57};
+  const n = parseInt(m[1],16); let r=((n>>16)&255)/255, g=((n>>8)&255)/255, b=(n&255)/255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; let h=0, l=(mx+mn)/2;
+  const s = d===0 ? 0 : d/(1-Math.abs(2*l-1));
+  if(d!==0){
+    if(mx===r) h=((g-b)/d)%6; else if(mx===g) h=(b-r)/d+2; else h=(r-g)/d+4;
+    h*=60; if(h<0) h+=360;
+  }
+  return { h:Math.round(h), s:Math.round(s*100), l:Math.round(l*100) };
+}
 // 依主角選的色，自動算一個較深的底色（磚的漸層用）
 function darken(hex, f=0.55){
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex); if(!m) return '#333';
@@ -89,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.35'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.36'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -670,14 +690,25 @@ function renderSettings(){
     + `<div class="set-row"><label>主角名字</label><input type="text" id="setName" maxlength="8" value="${nameEsc}" placeholder="主角"></div>`
     + `<div class="set-row"><label>戰鬥暱稱（2 字內）</label><input type="text" id="setNick" maxlength="2" value="${nickEsc}" placeholder="${nickPh}"></div>`
     + `<div class="set-hint">「主角名字」＝劇情裡和其他地方角色叫你的名字；「戰鬥暱稱」＝戰鬥介面顯示用（最多 2 字）。暱稱留空就自動取名字前 2 個字。</div>`
-    + `<div class="set-row"><label>主角代表色</label><input type="color" id="setColor" value="${settings.heroColor}"></div>`
+    + (()=>{ const c = hexToHsl(settings.heroColor); return `<div class="set-colorbox">`
+        + `<div class="set-row" style="margin-bottom:8px;"><label>主角代表色</label><span id="setColorPrev" class="color-prev" style="background:${settings.heroColor}"></span></div>`
+        + `<input type="range" id="setHue" class="hue" min="0" max="360" value="${c.h}">`
+        + `<input type="range" id="setSat" class="sl" min="0" max="100" value="${c.s}">`
+        + `<input type="range" id="setLit" class="sl" min="20" max="80" value="${c.l}">`
+        + `</div>`; })()
     + `<div class="set-row toggle" id="setEffRow"><label>顯示卡牌詳細效果</label><span class="switch ${settings.showTileEff?'on':''}">${settings.showTileEff?'開':'關'}</span></div>`
     + `<div class="set-hint">效果字很小、顯示在每張磚下方；新手建議開著（關掉版面更簡潔，滑鼠指上去仍看得到）。</div>`
     + `<div class="set-row toggle" id="setSortRow"><label>手牌排序</label><span class="switch on">${settings.handSort==='desc'?'大 → 小':'小 → 大'}</span></div>`
     + `<button class="modal-close" id="setClose">關閉</button>`;
   document.getElementById('setName').oninput = e => { settings.playerName = e.target.value; document.getElementById('setNick').placeholder = (e.target.value.trim().slice(0,2) || '主角'); saveSettings(); render(); };
   document.getElementById('setNick').oninput = e => { settings.battleNick = e.target.value; saveSettings(); render(); };
-  document.getElementById('setColor').oninput = e => { settings.heroColor = e.target.value; applyHeroColor(); saveSettings(); render(); };
+  const upColor = () => {
+    const h = +document.getElementById('setHue').value, s = +document.getElementById('setSat').value, l = +document.getElementById('setLit').value;
+    settings.heroColor = hslToHex(h, s, l);
+    document.getElementById('setColorPrev').style.background = settings.heroColor;
+    applyHeroColor(); saveSettings(); render();
+  };
+  ['setHue','setSat','setLit'].forEach(id => document.getElementById(id).oninput = upColor);
   document.getElementById('setEffRow').onclick = () => { settings.showTileEff = !settings.showTileEff; applyTileEff(); saveSettings(); renderSettings(); };
   document.getElementById('setSortRow').onclick = () => { settings.handSort = settings.handSort==='desc' ? 'asc' : 'desc'; saveSettings(); render(); renderSettings(); };
   document.getElementById('setClose').onclick = closeModal;

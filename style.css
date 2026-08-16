@@ -260,7 +260,13 @@ body {
 .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .set-row label { font-size: 14px; color: #c3cee6; }
 .set-row input[type=text] { flex: 1; max-width: 160px; padding: 6px 9px; border-radius: 6px; border: 1px solid #34406a; background: #101a34; color: #eef2fb; font-size: 14px; }
-.set-row input[type=color] { width: 40px; height: 32px; padding: 0; border: 1px solid #34406a; border-radius: 6px; background: none; cursor: pointer; }
+/* 自訂色盤：預覽色塊＋三條拖桿（色相/濃淡/明暗），不跳原生色盤＝沒有快速選色 */
+.color-prev { width: 42px; height: 26px; border-radius: 6px; border: 1px solid rgba(255,255,255,.3); box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.set-colorbox input[type=range] { width: 100%; margin: 5px 0; height: 14px; -webkit-appearance: none; appearance: none; border-radius: 7px; cursor: pointer; }
+.set-colorbox input.hue { background: linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.set-colorbox input.sl { background: #33405f; }
+.set-colorbox input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #34406a; box-shadow: 0 1px 3px rgba(0,0,0,.5); cursor: pointer; }
+.set-colorbox input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #34406a; cursor: pointer; }
 .set-row.toggle { cursor: pointer; }
 .set-row.toggle .switch { font-size: 13px; font-weight: bold; padding: 4px 14px; border-radius: 12px; background: #33405f; color: #9fb0cf; }
 .set-row.toggle .switch.on { background: linear-gradient(90deg,#2e8b6f,#4fd1a5); color: #06231a; }
