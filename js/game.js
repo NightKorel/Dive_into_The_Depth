@@ -77,8 +77,8 @@ function pickNegWave(){ return NEG_WAVES[Math.floor(Math.random()*NEG_WAVES.leng
 
 // 敵人：行動用一條會循環的 pattern（normal 普攻／heavy 預告重擊／resonance 深淵共鳴）
 let enemy = {
-  name:'淵蟲', hpMax:55, hp:55, atkMin:4, atkMax:6,
-  heavyMin:11, heavyMax:14, resMin:2, resMax:3,
+  name:'淵蟲', hpMax:55, hp:55, atkMin:8, atkMax:12,   // 傷害×2（納可 playtest：怪再強一點，看看手感）
+  heavyMin:22, heavyMax:28, resMin:4, resMax:6,
   pattern:['normal','normal','heavy','normal','resonance','normal'],
 };
 let ePatIdx = -1, eNext = null, corruptNext = null;
