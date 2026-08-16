@@ -17,35 +17,35 @@
 // num=數字(容量/combo)，dmg=基礎傷害，heal=回血，eff=特殊效果
 const SKILLS = {
   風刃: { name:'風刃', num:1, dmg:1, desc:'造成 1 點傷害' },
-  風壓: { name:'風壓', num:2, desc:'本回合全體敵人造成傷害 -2', eff:{ enemyFlat:2 } },
+  風壓: { name:'風壓', num:4, desc:'本回合全體敵人造成傷害 -3', eff:{ enemyFlat:3 } },
   治癒: { name:'治癒', num:3, heal:3, desc:'回復 3 點血量' },
   隱忍: { name:'隱忍', num:3, desc:'本回合減傷 3', eff:{ mitigate:3 } },
-  蓄力: { name:'蓄力', num:4, desc:'本回合若打出5，總傷害 +4', eff:{ buffIf5:4 } },
+  蓄力: { name:'蓄力', num:2, desc:'本回合若打出5，總傷害 +4', eff:{ buffIf5:4 } },
   刀舞: { name:'刀舞', num:5, dmg:5, desc:'造成 5 點傷害' },
-  精準: { name:'精準', num:2, desc:'每張打出的2(含隊友)使敵傷 -2', eff:{ jingzhun:2 } },
+  精準: { name:'精準', num:4, desc:'每張打出的4(含隊友)使敵傷 -3', eff:{ jingzhun:3 } },
   格擋: { name:'格擋', num:3, desc:'本回合減傷 3', eff:{ mitigate:3 } },
-  振奮: { name:'振奮', num:4, desc:'出現最多次的數字每張使總傷 +1', eff:{ buffMost:1 } },
+  振奮: { name:'振奮', num:2, desc:'出現最多次的數字每張使總傷 +1', eff:{ buffMost:1 } },
   重斬: { name:'重斬', num:5, dmg:5, desc:'造成 5 點傷害' },
-  冰封: { name:'冰封', num:2, desc:'本回合敵人骰最低傷害', eff:{ enemyMin:true } },
+  冰封: { name:'冰封', num:4, desc:'本回合敵人骰最低傷害', eff:{ enemyMin:true } },
   療藥: { name:'療藥', num:3, heal:3, desc:'回復 3 點血量' },
-  洞察: { name:'洞察', num:4, desc:'預知接下來兩回合波動', eff:{ foresight:true } },
+  洞察: { name:'洞察', num:2, desc:'預知接下來兩回合波動', eff:{ foresight:true } },
   霜爆: { name:'霜爆', num:5, dmg:5, desc:'造成 5 點傷害' },
   影鞭: { name:'影鞭', num:1, dmg:1, desc:'造成 1 點傷害' },
-  威壓: { name:'威壓', num:2, desc:'本回合全體敵人命中 -30%', eff:{ enemyAcc:0.3 } },
+  威壓: { name:'威壓', num:4, desc:'本回合全體敵人命中 -50%', eff:{ enemyAcc:0.5 } },
   吸取: { name:'吸取', num:3, dmg:1, heal:2, desc:'造成1傷害，回復2血' },
-  影幕: { name:'影幕', num:4, desc:'本回合我方閃避 +30%', eff:{ evade:0.3 } },
+  影幕: { name:'影幕', num:2, desc:'本回合我方閃避 +30%', eff:{ evade:0.3 } },
   火刃: { name:'火刃', num:1, dmg:1, desc:'造成 1 點傷害' },
-  加溫: { name:'加溫', num:4, desc:'每打出一張1，總傷 +2', eff:{ buffPer1:2 } },
+  加溫: { name:'加溫', num:2, desc:'每打出一張1，總傷 +2', eff:{ buffPer1:2 } },
   爆焰: { name:'爆焰', num:5, dmg:5, desc:'造成 5 點傷害' },
 };
 
 // ---------- 開局四人（含二選一的預設選擇；之後可做成可調 loadout）----------
 // 代表色沿用淵1（納可指定的精確色號）：主角土金、K棕、V深藍、L森林綠。
 const HEROES = [
-  { id:'主角', tiles:['精準','格擋','重斬'], color:'#E8A63C', dark:'#9c6a1e' }, // 2,3,5（橘黃，跟K深棕區隔）
-  { id:'K',   tiles:['風刃','風壓','治癒'], color:'#9C6F27', dark:'#5f4318' }, // 1,2,3
-  { id:'V',   tiles:['隱忍','蓄力','刀舞'], color:'#4067A2', dark:'#26406a' }, // 3,4,5（三張不同）
-  { id:'L',   tiles:['療藥','洞察','霜爆'], color:'#9EBF7B', dark:'#5f7a4a' }, // 3,4,5
+  { id:'主角', tiles:['精準','格擋','重斬'], color:'#E8A63C', dark:'#9c6a1e' }, // 4,3,5（橘黃，跟K深棕區隔）
+  { id:'K',   tiles:['風刃','風壓','治癒'], color:'#9C6F27', dark:'#5f4318' }, // 1,4,3
+  { id:'V',   tiles:['隱忍','蓄力','刀舞'], color:'#4067A2', dark:'#26406a' }, // 3,2,5（三張不同）
+  { id:'L',   tiles:['療藥','洞察','霜爆'], color:'#9EBF7B', dark:'#5f7a4a' }, // 3,2,5
 ];
 const HERO_COLOR = {}; HEROES.forEach(h => HERO_COLOR[h.id] = h);
 
@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.40'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.41'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -241,7 +241,7 @@ function fullStraightRun(nums){
 // 收集防禦/敵傷相關效果（在敵人回合結算）
 function collectDef(arr){
   let mitigate=0, flat=0, minRoll=false, accDown=0, evade=0;
-  const count2 = arr.filter(t=>t.skill.num===2).length;
+  const count4 = arr.filter(t=>t.skill.num===4).length;
   const hasJing = arr.some(t=>t.skill.eff && t.skill.eff.jingzhun);
   arr.forEach(t => { const e=t.skill.eff||{};
     if(e.mitigate) mitigate += e.mitigate;
@@ -250,7 +250,7 @@ function collectDef(arr){
     if(e.enemyAcc) accDown = Math.max(accDown, e.enemyAcc);
     if(e.evade) evade = Math.max(evade, e.evade);
   });
-  if(hasJing) flat += count2 * 2; // 精準：每張2(含隊友) -2
+  if(hasJing) flat += count4 * 3; // 精準：每張4(含隊友) -3
   return { mitigate, flat, minRoll, accDown, evade };
 }
 
@@ -449,13 +449,13 @@ function finish(won){
 }
 
 // ---------- 畫面 ----------
-// 右上角效果徽章：看技能角色。1攻擊🗡️／2減益🔯／3保命(有回血=治療💚,否則減傷🛡️)／4增益✨／5大招💥
+// 右上角效果徽章：看技能角色。1攻擊🗡️／2增益✨／3保命(有回血=治療💚,否則減傷🛡️)／4減益🔯／5大招💥
 function effIcon(skill){
   switch(skill.num){
     case 1: return '🗡️';
-    case 2: return '🔯';
+    case 2: return '✨';
     case 3: return skill.heal ? '💚' : '🛡️';
-    case 4: return '✨';
+    case 4: return '🔯';
     case 5: return '💥';
     default: return '';
   }
