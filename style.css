@@ -442,3 +442,19 @@ body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:n
 
 /* 間距微調到 8pt 節奏（面板之間 8） */
 #game { gap: 8px; }
+
+/* ============================================================
+   質感精修 v2（納可 2026-08-16：收尾小修）
+   ============================================================ */
+/* ALL IN 按鈕圓角跟上小圓角系統（原 10 偏大） */
+#btnAllIn { border-radius: var(--r-m); }
+/* 磚上小徽章加淡影＝在亮色磚（金）上也看得清 */
+.tile .badge { text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+/* 敵人血條圓角＝小圓角（原膠囊在小血條上有點過圓），跟卡片一致 */
+.enemy-card .hpbar.enemy { border-radius: var(--r-s); }
+/* 手牌/出招帶那排「卡池・棄牌」可點字：虛線收細一點、更精緻 */
+.pileview { border-bottom-style: dotted; }
+/* 出招帶容量那行的數字對齊呼吸感：右側統計字距收一點 */
+#capText { letter-spacing: .3px; }
+/* log 底部一點上緣留白＝跟按鈕分開 */
+#log { margin-top: 2px; }
