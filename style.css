@@ -458,3 +458,11 @@ body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:n
 #capText { letter-spacing: .3px; }
 /* log 底部一點上緣留白＝跟按鈕分開 */
 #log { margin-top: 2px; }
+
+/* ============================================================
+   文字語意配色（納可 2026-08-16：讓文字顏色＝意義，對到 Nord semantic）
+   紅=危險/傷害、黃=警示、紫=深淵/波動、綠=治療、藍=資訊/防禦。
+   ============================================================ */
+.intent, .ecard-intent .i-normal { color: #e0c48a; }      /* 一般攻擊＝黃/琥珀警示 */
+.intent.heavy, .ecard-intent .i-heavy { color: #d0777f; } /* 蓄力重擊＝Nord 紅危險 */
+.intent.reson, .ecard-intent .i-reson { color: #c3a0d0; } /* 深淵共鳴＝Nord 紫 */

@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.58'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.59'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。
@@ -437,7 +437,7 @@ function enemyTurn(def){
     alive.forEach((e, i) => {
       const mv = e.next || { type:'normal', min:e.atkMin, max:e.atkMax }; // 保險：next 萬一為空也不炸
       const heavy = mv.type === 'heavy', reson = mv.type === 'resonance';
-      if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c9a0ff">深淵共鳴</b>！下回合波動被污染（用洞察才看得到內容）`); }
+      if(reson){ corruptNext = mv.wave; log(`🌀 <b style="color:#c3a0d0">深淵共鳴</b>！下回合波動被污染（用洞察才看得到內容）`); }
       const hitChance = (1-(def.accDown||0)) * (1-(def.evade||0));
       if(Math.random() > hitChance){ setTimeout(()=> floatNum('MISS','miss','team'), i*260); log(`淵蟲${heavy?'的重擊':reson?'的共鳴一擊':''} <b>閃避</b>了！`); return; }
       let dmg = def.minRoll ? mv.min : mv.min + Math.floor(Math.random()*(mv.max-mv.min+1));
