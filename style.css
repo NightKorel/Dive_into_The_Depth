@@ -415,3 +415,30 @@ body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:n
 /* 負面波動染色也對到 Nord 紫 */
 #cardArea.negwave { border-color: rgba(180,142,173,.6); box-shadow: 0 0 14px rgba(180,142,173,.3) inset; }
 #cardArea.negwave .card-name { color: #cfa3c4; } #cardArea.negwave .card-title::after { color: var(--purple); }
+
+/* ============================================================
+   質感精修 v1（納可 2026-08-16：照介面設計筆記做；喜歡圓角但要小一點）
+   1. 圓角收成一組小圓角系統（別大、別隨機）。
+   2. 陰影改「分層柔和」（3 條越遠越大越淡）＝真實光散射感，取代單條硬影。
+   全靜態、無新動畫。
+   ============================================================ */
+:root { --r-s:4px; --r-m:6px; --r-l:8px; }  /* 小圓角系統：小元件4、卡/鈕6、容器8 */
+
+/* 圓角：全畫面統一成小圓角（原本 8~12 偏大） */
+.panel, .modal, .ls-btn { border-radius: var(--r-l); }         /* 容器 8 */
+.tile, #btnBar button, .hero, .menu-pop, #btnMenu,
+.menu-pop button, .pile-chip, .modal-close { border-radius: var(--r-m); }  /* 卡/鈕 6 */
+.color-prev, .set-row input[type=text] { border-radius: var(--r-s); }      /* 小元件 4 */
+/* 血條/體力條維持膠囊（bar 的慣例，不動） */
+
+/* 分層柔和陰影：容器＝低高度、彈窗＝高高度、磚/鈕＝小浮起 */
+.panel { box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 2px 5px rgba(0,0,0,.13), 0 6px 14px rgba(0,0,0,.09); }
+.tile { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 2px rgba(0,0,0,.28), 0 2px 5px rgba(0,0,0,.16); }
+.seqbar .tile { box-shadow: 0 0 7px rgba(136,192,208,.4), inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(0,0,0,.28); }
+#btnBar button { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.16); }
+#btnBar button.primary { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 2px rgba(0,0,0,.25), 0 3px 10px rgba(191,97,106,.4); }
+/* 彈窗/選單＝浮得最高（分層更深） */
+.modal, .menu-pop, .ls-btn { box-shadow: 0 2px 6px rgba(0,0,0,.22), 0 8px 20px rgba(0,0,0,.28), 0 16px 40px rgba(0,0,0,.34); }
+
+/* 間距微調到 8pt 節奏（面板之間 8） */
+#game { gap: 8px; }
