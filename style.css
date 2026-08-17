@@ -466,3 +466,28 @@ body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:n
 .intent, .ecard-intent .i-normal { color: #e0c48a; }      /* 一般攻擊＝黃/琥珀警示 */
 .intent.heavy, .ecard-intent .i-heavy { color: #d0777f; } /* 蓄力重擊＝Nord 紅危險 */
 .intent.reson, .ecard-intent .i-reson { color: #c3a0d0; } /* 深淵共鳴＝Nord 紫 */
+
+/* ============================================================
+   特效顏色調鮮豔（納可 2026-08-16：底層安靜、但飄字/combo 高亮要搶眼＝爽感）
+   原則：resting UI 維持低飽和 Nord；但「回饋特效」用飽和鮮色跳出來。
+   ============================================================ */
+/* 飄字：飽和鮮色＋強光暈（爆擊最兇） */
+.floatnum       { color: #ffd35b; text-shadow: 0 0 12px rgba(255,180,40,.6), 0 2px 4px #000; }
+.floatnum.dmg   { color: #ff7d7d; text-shadow: 0 0 12px rgba(255,60,60,.65), 0 2px 4px #000; }
+.floatnum.crit  { color: #ff4d4d; -webkit-text-stroke: 1.5px #4a0d0d;
+  text-shadow: 0 0 18px rgba(255,50,50,.85), 0 0 8px rgba(255,150,80,.7), 0 2px 5px #000; }
+.floatnum.heal  { color: #4dff9e; text-shadow: 0 0 14px rgba(50,230,140,.7), 0 2px 4px #000; }
+.floatnum.stam  { color: #ffcf47; text-shadow: 0 0 14px rgba(255,190,50,.7), 0 2px 4px #000; }
+.floatnum.block { color: #6fc6ff; text-shadow: 0 0 12px rgba(60,160,255,.65), 0 2px 4px #000; }
+.floatnum.full  { color: #ffe45c; text-shadow: 0 0 16px rgba(255,200,50,.9), 0 0 7px #fff, 0 2px 4px #000; }
+
+/* combo 高亮框：電光藍(順子)／暖金(對子)＝鮮豔跳出，光暈調亮調大 */
+:root { --c-straight: #62c8ff; --c-pair: #ffc23e; }
+@keyframes comboPulse {
+  0%,100% { box-shadow: 0 0 5px rgba(var(--gc),.45); }
+  50%     { box-shadow: 0 0 16px rgba(var(--gc),.95); }
+}
+.tile.instraight { --gc: 98,200,255; }
+.tile.inpair     { --gc: 255,194,62; }
+/* 滿順金框更閃 */
+.tile.fullstraight { box-shadow: 0 0 22px #ffca28, 0 0 10px #ffe082; }
