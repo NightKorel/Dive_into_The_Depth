@@ -325,3 +325,64 @@ body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; over
   color: rgba(255,255,255,.82); }
 /* 描述裡的數字(3、-2、-30%…)加粗＋純白＝一眼看到關鍵數值 */
 body.eff-on .tile .eff .dnum { font-weight: 900; color: #fff; }
+
+/* ============================================================
+   靜態美化增補（納可 2026-08-16 要：多加靜態細節、不要卡頓）
+   原則：只用漸層／內外陰影／頂部高光等「畫一次就定」的靜態效果，
+   不新增任何無限動畫，避免重繪卡頓。全部疊在原規則之後。
+   ============================================================ */
+
+/* 深淵背景：加一層固定的「光塵＋下沉變暗」氛圍（靜態、只畫一次） */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(2.5px 2.5px at 18% 24%, rgba(180,210,255,.10), transparent 60%),
+    radial-gradient(2px 2px at 72% 16%, rgba(170,200,255,.09), transparent 60%),
+    radial-gradient(1.6px 1.6px at 40% 62%, rgba(190,215,255,.08), transparent 60%),
+    radial-gradient(2px 2px at 86% 54%, rgba(160,195,255,.07), transparent 60%),
+    radial-gradient(1.6px 1.6px at 28% 82%, rgba(180,210,255,.07), transparent 60%),
+    radial-gradient(2.2px 2.2px at 60% 88%, rgba(170,200,255,.06), transparent 60%),
+    radial-gradient(ellipse 120% 60% at 50% 118%, rgba(5,8,16,.9), transparent 70%);
+}
+
+/* 面板：上亮下暗的漸層＋頂部一道高光＋落地陰影＝有厚度、像浮起的石板 */
+.panel {
+  background: linear-gradient(180deg, rgba(38,50,80,.74) 0%, rgba(22,30,52,.74) 100%);
+  box-shadow: 0 3px 12px rgba(0,0,0,.38), inset 0 1px 0 rgba(150,180,230,.14);
+}
+
+/* 區塊小標題：底下一條極淡分隔線＋左側一小道色條，結構更清楚 */
+.row-head, .card-title { border-bottom: 1px solid rgba(150,180,230,.10); padding-bottom: 5px; }
+.card-title { position: relative; padding-left: 9px; }
+.card-title::before { content: ''; position: absolute; left: 0; top: 1px; width: 3px; height: 12px;
+  border-radius: 2px; background: linear-gradient(180deg, #9a86e0, #5a4a8a); }
+
+/* 敵人區：內縮一圈暗角＝敵人像從黑暗中浮出來 */
+#enemyArea { box-shadow: 0 3px 12px rgba(0,0,0,.38), inset 0 0 46px rgba(0,0,0,.5), inset 0 1px 0 rgba(150,180,230,.10); }
+
+/* 血條／體力條：軌道加內陰影凹槽、填色加頂部一道高光＝玻璃管質感 */
+.hpbar { box-shadow: inset 0 2px 4px rgba(0,0,0,.5), inset 0 -1px 0 rgba(255,255,255,.05); }
+.hpbar .hpfill { box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -3px 5px rgba(0,0,0,.2); }
+
+/* 磚塊：頂部高光＋底部內陰影＝真的凸起的磚（不改原本依號碼的漸層底色） */
+.tile { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -3px 6px rgba(0,0,0,.30), 0 2px 4px rgba(0,0,0,.34); }
+/* 出招帶上的磚：保留原本的藍光暈，再補上同樣的凸起質感 */
+.seqbar .tile { box-shadow: 0 0 8px rgba(120,180,255,.4), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -3px 6px rgba(0,0,0,.30); }
+
+/* 角色小方塊：內側一層淡漸層＋頂光＝小石牌質感 */
+.hero { background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.015));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(0,0,0,.22), 0 2px 5px rgba(0,0,0,.32); }
+
+/* 下排按鈕：上亮下暗漸層＋頂光＝可按的立體感 */
+#btnBar button { background: linear-gradient(180deg, #2b3960, #1f2a48);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 2px 5px rgba(0,0,0,.36); }
+#btnBar button:hover { background: linear-gradient(180deg, #33436e, #26325400); }
+#btnBar button.primary { background: linear-gradient(180deg, #c2447a, #a83060);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px rgba(180,50,100,.4); }
+
+/* 左上選單鈕：補一點立體與陰影 */
+#btnMenu { box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.4); }
+
+/* 螢幕四角極淡壓暗＝聚焦中央、加深淵感（固定、靜態、不擋點擊） */
+body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  box-shadow: inset 0 0 160px 40px rgba(4,7,14,.55); }
