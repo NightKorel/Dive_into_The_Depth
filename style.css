@@ -327,62 +327,62 @@ body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; over
 body.eff-on .tile .eff .dnum { font-weight: 900; color: #fff; }
 
 /* ============================================================
-   靜態美化增補（納可 2026-08-16 要：多加靜態細節、不要卡頓）
-   原則：只用漸層／內外陰影／頂部高光等「畫一次就定」的靜態效果，
-   不新增任何無限動畫，避免重繪卡頓。全部疊在原規則之後。
+   靜態美化 v2（納可 2026-08-16：先查了平面/遊戲 UI 設計再重做）
+   設計原則（Balatro/殺戮尖塔那套「簡單靜態卻好看」的紀律）：
+   1. 圖／地分離＝容器/背景「退後」（暗、低對比、安靜），
+      可互動/重要的東西（磚塊、出擊鈕、敵人）「跳出來」。
+   2. 層次靠對比/大小/間距，不靠給每個東西上亮光。
+   3. 磚＝主角：飽和色塊＋乾淨深色描邊＋清楚字（不糊一堆反光）。
+   4. 克制＋一致：安靜的容器讓有意義的顏色（磚的號碼色）當焦點。
+   全靜態、無新動畫。
    ============================================================ */
 
-/* 深淵背景：加一層固定的「光塵＋下沉變暗」氛圍（靜態、只畫一次） */
-body::before {
-  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+/* 背景：更深更純的黑，容器才浮得出來；一點極淡光塵＋四角壓暗 */
+body { background: radial-gradient(ellipse 130% 90% at 50% -10%, #141d33 0%, #0a0e1a 55%, #070a12 100%); }
+body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background:
-    radial-gradient(2.5px 2.5px at 18% 24%, rgba(180,210,255,.10), transparent 60%),
-    radial-gradient(2px 2px at 72% 16%, rgba(170,200,255,.09), transparent 60%),
-    radial-gradient(1.6px 1.6px at 40% 62%, rgba(190,215,255,.08), transparent 60%),
-    radial-gradient(2px 2px at 86% 54%, rgba(160,195,255,.07), transparent 60%),
-    radial-gradient(1.6px 1.6px at 28% 82%, rgba(180,210,255,.07), transparent 60%),
-    radial-gradient(2.2px 2.2px at 60% 88%, rgba(170,200,255,.06), transparent 60%),
-    radial-gradient(ellipse 120% 60% at 50% 118%, rgba(5,8,16,.9), transparent 70%);
-}
+    radial-gradient(2px 2px at 22% 26%, rgba(170,200,255,.07), transparent 60%),
+    radial-gradient(1.6px 1.6px at 74% 18%, rgba(160,195,255,.06), transparent 60%),
+    radial-gradient(1.6px 1.6px at 44% 74%, rgba(175,205,255,.05), transparent 60%),
+    radial-gradient(2px 2px at 84% 60%, rgba(160,195,255,.045), transparent 60%);
+  box-shadow: inset 0 0 170px 46px rgba(4,7,14,.6); }
 
-/* 面板：上亮下暗的漸層＋頂部一道高光＋落地陰影＝有厚度、像浮起的石板 */
-.panel {
-  background: linear-gradient(180deg, rgba(38,50,80,.74) 0%, rgba(22,30,52,.74) 100%);
-  box-shadow: 0 3px 12px rgba(0,0,0,.38), inset 0 1px 0 rgba(150,180,230,.14);
-}
+/* 容器＝退後：安靜的暗面、低對比細邊、只有極淡分隔陰影。不上高光、不搶戲。 */
+.panel { background: rgba(19,26,45,.62); border: 1px solid rgba(110,140,200,.16);
+  box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 
-/* 區塊小標題：底下一條極淡分隔線＋左側一小道色條，結構更清楚 */
-.row-head, .card-title { border-bottom: 1px solid rgba(150,180,230,.10); padding-bottom: 5px; }
-.card-title { position: relative; padding-left: 9px; }
-.card-title::before { content: ''; position: absolute; left: 0; top: 1px; width: 3px; height: 12px;
-  border-radius: 2px; background: linear-gradient(180deg, #9a86e0, #5a4a8a); }
+/* 區塊標題＝安靜的「標籤感」：小、拉字距、低對比（它們是導引不是重點） */
+.row-head, .team-label, .card-title { color: #7f90b4; letter-spacing: 2px; font-size: 12px; }
+.row-head { border-bottom: 1px solid rgba(120,150,210,.10); padding-bottom: 6px; }
 
-/* 敵人區：內縮一圈暗角＝敵人像從黑暗中浮出來 */
-#enemyArea { box-shadow: 0 3px 12px rgba(0,0,0,.38), inset 0 0 46px rgba(0,0,0,.5), inset 0 1px 0 rgba(150,180,230,.10); }
+/* 敵人區＝舞台：稍微下沉的暗空間，讓敵人像站在裡面（低調 inset，不搶戲） */
+#enemyArea { background: rgba(15,20,36,.62); box-shadow: inset 0 6px 22px rgba(0,0,0,.4); }
+#battleTier { color: #c79cf0; }
 
-/* 血條／體力條：軌道加內陰影凹槽、填色加頂部一道高光＝玻璃管質感 */
-.hpbar { box-shadow: inset 0 2px 4px rgba(0,0,0,.5), inset 0 -1px 0 rgba(255,255,255,.05); }
-.hpbar .hpfill { box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -3px 5px rgba(0,0,0,.2); }
+/* 血條：乾淨的凹槽＋填色頂部一道細高光（適度、不誇張） */
+.hpbar { box-shadow: inset 0 1px 3px rgba(0,0,0,.5); }
+.hpbar .hpfill { box-shadow: inset 0 1px 0 rgba(255,255,255,.28); }
 
-/* 磚塊：頂部高光＋底部內陰影＝真的凸起的磚（不改原本依號碼的漸層底色） */
-.tile { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -3px 6px rgba(0,0,0,.30), 0 2px 4px rgba(0,0,0,.34); }
-/* 出招帶上的磚：保留原本的藍光暈，再補上同樣的凸起質感 */
-.seqbar .tile { box-shadow: 0 0 8px rgba(120,180,255,.4), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -3px 6px rgba(0,0,0,.30); }
+/* 磚塊＝主角：乾淨的深色描邊（Balatro 味）＋一道頂部細光讓色塊立體。
+   不加厚重內陰影（那會糊掉飽和色）；號碼色塊本身就是焦點。 */
+.tile { border: 1px solid rgba(0,0,0,.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(0,0,0,.35); }
+.seqbar .tile { box-shadow: 0 0 7px rgba(120,180,255,.38), inset 0 1px 0 rgba(255,255,255,.22); }
+/* 號碼色再飽和/明快一點點＝主角該有的對比（微調、不改色相） */
+.n1, .n5 { background: linear-gradient(160deg, #9e3030, #d15252); }
+.n2 { background: linear-gradient(160deg, #63407f, #9160c4); }
+.n3 { background: linear-gradient(160deg, #2f7a5d, #49b085); }
+.n4 { background: linear-gradient(160deg, #305f96, #558fce); }
 
-/* 角色小方塊：內側一層淡漸層＋頂光＝小石牌質感 */
-.hero { background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.015));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(0,0,0,.22), 0 2px 5px rgba(0,0,0,.32); }
+/* 角色小方塊：安靜（它是狀態列不是焦點），只留原本的代表色邊框 */
+.hero { background: rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
 
-/* 下排按鈕：上亮下暗漸層＋頂光＝可按的立體感 */
-#btnBar button { background: linear-gradient(180deg, #2b3960, #1f2a48);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 2px 5px rgba(0,0,0,.36); }
-#btnBar button:hover { background: linear-gradient(180deg, #33436e, #26325400); }
-#btnBar button.primary { background: linear-gradient(180deg, #c2447a, #a83060);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px rgba(180,50,100,.4); }
+/* 按鈕層次：出擊＝唯一主 CTA，飽和跳出來；其他三顆退後、安靜 */
+#btnBar button { background: rgba(30,40,66,.9); border-color: rgba(120,150,210,.28); color: #b9c6e2; font-weight: 600; }
+#btnBar button:hover { background: rgba(42,55,88,.95); color: #eef2fb; }
+#btnBar button.primary { background: linear-gradient(180deg, #d24d7f, #a82f5f); border: none; color: #fff;
+  font-weight: 800; box-shadow: 0 2px 10px rgba(190,50,105,.45); }
+#btnBar button.primary:disabled { box-shadow: none; }
 
-/* 左上選單鈕：補一點立體與陰影 */
-#btnMenu { box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.4); }
-
-/* 螢幕四角極淡壓暗＝聚焦中央、加深淵感（固定、靜態、不擋點擊） */
-body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  box-shadow: inset 0 0 160px 40px rgba(4,7,14,.55); }
+/* 試算大數字＝再拉開層次：出擊傷害是玩家最想看的，給它更亮更大的存在感 */
+.calc .big { color: #ffe08a; text-shadow: 0 0 10px rgba(255,190,60,.35), 0 1px 2px #000; }
