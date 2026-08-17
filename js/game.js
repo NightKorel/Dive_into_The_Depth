@@ -42,17 +42,17 @@ const SKILLS = {
 // ---------- 開局四人（含二選一的預設選擇；之後可做成可調 loadout）----------
 // 代表色沿用淵1（納可指定的精確色號）：主角土金、K棕、V深藍、L森林綠。
 const HEROES = [
-  { id:'主角', tiles:['精準','格擋','重斬'], color:'#E8A63C', dark:'#9c6a1e' }, // 4,3,5（橘黃，跟K深棕區隔）
-  { id:'K',   tiles:['風刃','風壓','治癒'], color:'#9C6F27', dark:'#5f4318' }, // 1,4,3
-  { id:'V',   tiles:['隱忍','蓄力','刀舞'], color:'#4067A2', dark:'#26406a' }, // 3,2,5（三張不同）
-  { id:'L',   tiles:['療藥','洞察','霜爆'], color:'#9EBF7B', dark:'#5f7a4a' }, // 3,2,5
+  { id:'主角', tiles:['精準','格擋','重斬'], color:'#ebcb8b', dark:'#927e56' }, // 4,3,5（Nord aurora 黃金；跟 K 暖橘棕區隔）
+  { id:'K',   tiles:['風刃','風壓','治癒'], color:'#d08770', dark:'#815445' }, // 1,4,3（Nord aurora 橘＝暖廚子）
+  { id:'V',   tiles:['隱忍','蓄力','刀舞'], color:'#5e81ac', dark:'#3a506b' }, // 3,2,5（Nord frost 沉穩藍）
+  { id:'L',   tiles:['療藥','洞察','霜爆'], color:'#a3be8c', dark:'#657657' }, // 3,2,5（Nord aurora 森林綠）
 ];
 const HERO_COLOR = {}; HEROES.forEach(h => HERO_COLOR[h.id] = h);
 
 // ---------- 設定（改名／改主角色／顯示卡牌詳細效果；存 localStorage） ----------
 const SETTINGS_KEY = 'yuan2_settings';
 // playerName＝全名（劇情/其他地方角色叫的名字）；battleNick＝戰鬥暱稱（≤2 字，戰鬥介面只顯示這個）
-let settings = { playerName:'', battleNick:'', heroColor:'#E8A63C', showTileEff:true, handSort:'asc' }; // handSort: 手牌排序 asc=小→大(預設) / desc=大→小
+let settings = { playerName:'', battleNick:'', heroColor:'#ebcb8b', showTileEff:true, handSort:'asc' }; // handSort: 手牌排序 asc=小→大(預設) / desc=大→小
 function loadSettings(){ try{ const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); if(s && typeof s==='object') Object.assign(settings, s); }catch(e){} }
 function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
 // 主角顯示名：內部識別仍用 '主角'（磚的 who、顏色查表都靠它）。
@@ -109,7 +109,7 @@ const CARDS = [
 ];
 
 // ---------- 遊戲狀態 ----------
-const VERSION = 'v0.2.54'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
+const VERSION = 'v0.2.55'; // 語意化版本 主.次.修：次號留給大里程碑、日常小改用修號；粗胚維持 0.x（規則見 CLAUDE.md）
 const CAP_BASE = 15, HAND_MAX = 8, TEAM_HP_MAX = 40; // 容量＝每回合排列上限（照舊、每回合重置）
 // 體力（＝會累積的行動池）：起 0，每回合開始 +13，上限 40。出擊會實際扣體力＝排出去那串磚的數字總和。
 // 每回合實際能排的數字總和＝min(體力, 容量)：正常被容量 15 卡著，攢體力是為了 ALL IN。

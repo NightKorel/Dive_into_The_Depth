@@ -64,7 +64,7 @@ body {
 @keyframes enemyDie { 0%{opacity:1} 100%{opacity:0; transform:scale(.5) translateY(18px); filter:grayscale(1) brightness(.4)} }
 @keyframes enemyEnter { 0%{transform:scale(.9)} 55%{transform:scale(1.06)} 100%{transform:scale(1)} }
 .enemy-name { position: relative; font-size: 14px; font-weight: bold; margin-bottom: 4px; color: #f0c0c0; text-align: center; }
-.enemy-name .focus-arrow { position: absolute; top: 50%; right: calc(50% + 1.8em); transform: translateY(-50%); color: var(--hero-color, #E8A63C); display: none; }
+.enemy-name .focus-arrow { position: absolute; top: 50%; right: calc(50% + 1.8em); transform: translateY(-50%); color: var(--hero-color, #ebcb8b); display: none; }
 /* 目標箭頭：縮放+透明度脈動(transform/opacity＝GPU、不吃效能)＝看起來活的、可點 */
 .enemy-card.focus .enemy-name .focus-arrow { display: block; animation: arrowBeckon 1s ease-in-out infinite; }
 @keyframes arrowBeckon {
@@ -327,62 +327,91 @@ body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; over
 body.eff-on .tile .eff .dnum { font-weight: 900; color: #fff; }
 
 /* ============================================================
-   靜態美化 v2（納可 2026-08-16：先查了平面/遊戲 UI 設計再重做）
-   設計原則（Balatro/殺戮尖塔那套「簡單靜態卻好看」的紀律）：
-   1. 圖／地分離＝容器/背景「退後」（暗、低對比、安靜），
-      可互動/重要的東西（磚塊、出擊鈕、敵人）「跳出來」。
-   2. 層次靠對比/大小/間距，不靠給每個東西上亮光。
-   3. 磚＝主角：飽和色塊＋乾淨深色描邊＋清楚字（不糊一堆反光）。
-   4. 克制＋一致：安靜的容器讓有意義的顏色（磚的號碼色）當焦點。
-   全靜態、無新動畫。
+   Nord 經典色票統一（納可 2026-08-16：面板上所有顏色都落在一個經典色票）
+   Nord palette（nordtheme.com）：Polar Night 深底、Snow Storm 文字、
+   Frost 藍青、Aurora 紅橘黃綠紫。全 UI 顏色都取自這裡＝天生協調。
+   設計原則沿用 v2：圖/地分離、磚塊當主角、出擊唯一主 CTA、全靜態無新動畫。
    ============================================================ */
+:root {
+  --n0:#2e3440; --n1:#3b4252; --n2:#434c5e; --n3:#4c566a;      /* Polar Night 深底 */
+  --n4:#d8dee9; --n5:#e5e9f0;                                  /* Snow Storm 文字 */
+  --fr2:#88c0d0; --fr3:#81a1c1; --fr4:#5e81ac;                 /* Frost 藍青 */
+  --red:#bf616a; --orange:#d08770; --yellow:#ebcb8b; --green:#a3be8c; --purple:#b48ead; /* Aurora */
+  --muted:#7b869c;                                             /* 安靜標籤色 */
+  /* combo 高亮改用 Nord：順子=frost 藍、對子=aurora 黃 */
+  --c-straight:#88c0d0; --c-pair:#ebcb8b;
+}
 
-/* 背景：更深更純的黑，容器才浮得出來；一點極淡光塵＋四角壓暗 */
-body { background: radial-gradient(ellipse 130% 90% at 50% -10%, #141d33 0%, #0a0e1a 55%, #070a12 100%); }
+/* 背景＝Nord 深底再壓暗成「深淵」（維持 Nord 藍灰調、不是死黑）＋極淡光塵 */
+body { color: var(--n4);
+  background: radial-gradient(ellipse 130% 90% at 50% -10%, #2b3140 0%, #20252f 52%, #171b23 100%); }
 body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background:
-    radial-gradient(2px 2px at 22% 26%, rgba(170,200,255,.07), transparent 60%),
-    radial-gradient(1.6px 1.6px at 74% 18%, rgba(160,195,255,.06), transparent 60%),
-    radial-gradient(1.6px 1.6px at 44% 74%, rgba(175,205,255,.05), transparent 60%),
-    radial-gradient(2px 2px at 84% 60%, rgba(160,195,255,.045), transparent 60%);
-  box-shadow: inset 0 0 170px 46px rgba(4,7,14,.6); }
+    radial-gradient(2px 2px at 22% 26%, rgba(216,222,233,.06), transparent 60%),
+    radial-gradient(1.6px 1.6px at 74% 18%, rgba(216,222,233,.05), transparent 60%),
+    radial-gradient(1.6px 1.6px at 44% 74%, rgba(216,222,233,.045), transparent 60%),
+    radial-gradient(2px 2px at 84% 60%, rgba(216,222,233,.04), transparent 60%);
+  box-shadow: inset 0 0 170px 46px rgba(15,18,24,.6); }
 
-/* 容器＝退後：安靜的暗面、低對比細邊、只有極淡分隔陰影。不上高光、不搶戲。 */
-.panel { background: rgba(19,26,45,.62); border: 1px solid rgba(110,140,200,.16);
-  box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+/* 容器＝退後（Nord polar night、安靜細邊） */
+.panel { background: rgba(59,66,82,.5); border: 1px solid rgba(76,86,106,.5); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+#enemyArea { background: rgba(46,52,64,.6); box-shadow: inset 0 6px 22px rgba(0,0,0,.4); }
 
-/* 區塊標題＝安靜的「標籤感」：小、拉字距、低對比（它們是導引不是重點） */
-.row-head, .team-label, .card-title { color: #7f90b4; letter-spacing: 2px; font-size: 12px; }
-.row-head { border-bottom: 1px solid rgba(120,150,210,.10); padding-bottom: 6px; }
+/* 標題＝安靜標籤感 */
+.row-head, .team-label, .card-title { color: var(--muted); letter-spacing: 2px; font-size: 12px; }
+.row-head { border-bottom: 1px solid rgba(76,86,106,.35); padding-bottom: 6px; }
+#battleTier { color: var(--purple); text-shadow: 0 0 6px rgba(180,142,173,.4); }
+.card-name { color: var(--purple); }
+.card-desc { color: #aeb6c6; }
+.foresight { color: var(--muted); }
+.calc { color: #c3cddd; } .calc b { color: var(--yellow); }
+.calc .big { color: var(--yellow); text-shadow: 0 0 10px rgba(235,203,139,.35), 0 1px 2px #000; }
+.seqeff { color: #a9c9bb; }
+#log { color: #9aa6bd; } #log .win { color: var(--green); } #log .lose { color: var(--red); }
 
-/* 敵人區＝舞台：稍微下沉的暗空間，讓敵人像站在裡面（低調 inset，不搶戲） */
-#enemyArea { background: rgba(15,20,36,.62); box-shadow: inset 0 6px 22px rgba(0,0,0,.4); }
-#battleTier { color: #c79cf0; }
+/* 血條／體力／敵血＝Nord 綠/黃/紅（軌道 Nord 深底＋填色頂部細高光） */
+.hpbar { background: #2e3440; box-shadow: inset 0 1px 3px rgba(0,0,0,.5); }
+.hpbar .hpfill { box-shadow: inset 0 1px 0 rgba(255,255,255,.26); }
+.hpbar.team .hpfill    { background: linear-gradient(90deg, #7a9b6e, #a3be8c); }
+.hpbar.stamina .hpfill { background: linear-gradient(90deg, #c9a86a, #ebcb8b); }
+.hpbar.enemy .hpfill   { background: linear-gradient(90deg, #9d4d55, #bf616a); }
+.bar-label.hp { color: var(--green); } .bar-label.sta { color: var(--yellow); }
+.enemy-name { color: #e0a9ad; }
 
-/* 血條：乾淨的凹槽＋填色頂部一道細高光（適度、不誇張） */
-.hpbar { box-shadow: inset 0 1px 3px rgba(0,0,0,.5); }
-.hpbar .hpfill { box-shadow: inset 0 1px 0 rgba(255,255,255,.28); }
+/* 磚塊＝主角：乾淨深色描邊＋一道頂部細光（色塊底色來自角色代表色，已在 JS 改成 Nord 四色） */
+.tile { border: 1px solid rgba(0,0,0,.42); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(0,0,0,.35); }
+.seqbar .tile { box-shadow: 0 0 7px rgba(136,192,208,.4), inset 0 1px 0 rgba(255,255,255,.22); }
 
-/* 磚塊＝主角：乾淨的深色描邊（Balatro 味）＋一道頂部細光讓色塊立體。
-   不加厚重內陰影（那會糊掉飽和色）；號碼色塊本身就是焦點。 */
-.tile { border: 1px solid rgba(0,0,0,.4);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(0,0,0,.35); }
-.seqbar .tile { box-shadow: 0 0 7px rgba(120,180,255,.38), inset 0 1px 0 rgba(255,255,255,.22); }
-/* 號碼色再飽和/明快一點點＝主角該有的對比（微調、不改色相） */
-.n1, .n5 { background: linear-gradient(160deg, #9e3030, #d15252); }
-.n2 { background: linear-gradient(160deg, #63407f, #9160c4); }
-.n3 { background: linear-gradient(160deg, #2f7a5d, #49b085); }
-.n4 { background: linear-gradient(160deg, #305f96, #558fce); }
-
-/* 角色小方塊：安靜（它是狀態列不是焦點），只留原本的代表色邊框 */
+/* 角色小方塊：安靜 */
 .hero { background: rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
 
-/* 按鈕層次：出擊＝唯一主 CTA，飽和跳出來；其他三顆退後、安靜 */
-#btnBar button { background: rgba(30,40,66,.9); border-color: rgba(120,150,210,.28); color: #b9c6e2; font-weight: 600; }
-#btnBar button:hover { background: rgba(42,55,88,.95); color: #eef2fb; }
-#btnBar button.primary { background: linear-gradient(180deg, #d24d7f, #a82f5f); border: none; color: #fff;
-  font-weight: 800; box-shadow: 0 2px 10px rgba(190,50,105,.45); }
+/* 按鈕層次：出擊＝唯一主 CTA（Nord 紅＝攻擊/危險），其他三顆退後（Nord polar night） */
+#btnBar button { background: var(--n2); border-color: rgba(76,86,106,.7); color: #c3cbdb; font-weight: 600; }
+#btnBar button:hover { background: #4a556d; color: var(--n5); }
+#btnBar button.primary { background: linear-gradient(180deg, #c56b73, #a8535b); border: none; color: #fff;
+  font-weight: 800; box-shadow: 0 2px 10px rgba(191,97,106,.45); }
 #btnBar button.primary:disabled { box-shadow: none; }
 
-/* 試算大數字＝再拉開層次：出擊傷害是玩家最想看的，給它更亮更大的存在感 */
-.calc .big { color: #ffe08a; text-shadow: 0 0 10px rgba(255,190,60,.35), 0 1px 2px #000; }
+/* ALL IN！＝Nord 黃→紅（跟出擊同一組暖 Aurora） */
+#btnAllIn { background: linear-gradient(90deg, #ebcb8b, #bf616a); box-shadow: 0 0 12px rgba(235,203,139,.7); }
+#btnAllIn.active { background: linear-gradient(90deg, #bf616a, #ebcb8b); box-shadow: 0 0 18px rgba(191,97,106,.9); }
+
+/* 飄字＝對到 Nord（傷害紅、治療綠、體力黃、格擋藍青） */
+.floatnum { color: var(--yellow); }
+.floatnum.crit { color: #d97b83; -webkit-text-stroke: 1.5px #401b1e; }
+.floatnum.heal { color: var(--green); text-shadow: 0 0 10px rgba(163,190,140,.5), 0 2px 4px #000; }
+.floatnum.dmg  { color: #cf7079; }
+.floatnum.stam { color: var(--yellow); text-shadow: 0 0 10px rgba(235,203,139,.5), 0 2px 4px #000; }
+.floatnum.block{ color: var(--fr2); text-shadow: 0 0 10px rgba(136,192,208,.5), 0 2px 4px #000; }
+.floatnum.full { color: var(--yellow); }
+
+/* 選單/選關/設定視窗＝一起對到 Nord，整體一致 */
+#btnMenu, .menu-pop { background: rgba(46,52,64,.95); border-color: rgba(76,86,106,.7); color: #cbd3e0; }
+.menu-pop button { color: #cbd3e0; } .menu-pop button:hover { background: rgba(94,129,172,.3); }
+.ls-btn, .modal { background: rgba(59,66,82,.95); border-color: rgba(76,86,106,.7); }
+.ls-btn:hover { background: #4a556d; }
+.modal-close { background: var(--n2); } .modal-close:hover { background: #4a556d; }
+
+/* 負面波動染色也對到 Nord 紫 */
+#cardArea.negwave { border-color: rgba(180,142,173,.6); box-shadow: 0 0 14px rgba(180,142,173,.3) inset; }
+#cardArea.negwave .card-name { color: #cfa3c4; } #cardArea.negwave .card-title::after { color: var(--purple); }
