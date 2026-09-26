@@ -236,12 +236,12 @@ const SKILLS = {
   slash: { name: '劈斬', desc: '單傷' + dr('slash'), target: 'enemy', run(u, t) { hit(u, t, 'slash'); } },
   taunt: { name: '嘲諷', desc: '嘲諷全體敵人（單攻都打他），到他下個回合', target: 'none',
     run(u) { addGlob('taunt', u.id, 1); log('嘲諷：單攻都會打主角（到他下個回合）。', 'good'); } },
-  charge_in: { name: '突襲', desc: '衝上前排單傷，打完留在前排；回合開始就在後排、這回合沒換位才能用' + dr('charge_in'),
-    target: 'enemy', needsChargeMode: true,
-    usable(u) { return u.startBack && u.movePt && u.row === 'back'; },
-    run(u, t, extra) {
-      if (extra && extra.swap) { const o = uById(extra.swap); if (o && !o.ko && o.row === 'front' && o.movePt) { o.row = 'back'; o.movePt = false; if (isND(o)) exhaust(o, false); } }
-      u.row = 'front'; u.movePt = false;
+  // 突襲：不花移動點、只衝空位（納可 2026-09-26）；回合開始就在後排才能用（防「先退後排再突襲」每回合刷高傷）
+  charge_in: { name: '突襲', desc: '衝進前排空位單傷，打完留在前排；不花移動點，回合開始就在後排才能用' + dr('charge_in'),
+    target: 'enemy',
+    usable(u) { return u.startBack && u.row === 'back'; },
+    run(u, t) {
+      u.row = 'front';
       hit(u, t, 'charge_in');
     } },
   hero_b2: { name: '干擾', desc: '全體超小傷害，並打斷蓄力中的敵人（跳過牠下一記群攻）（每隻 ' + SKILL_DMG.hero_b2.join('~') + '）', target: 'none',
@@ -282,7 +282,7 @@ const SKILLS = {
     run(u) { aliveEnemies().forEach(e => hit(u, e, 'windblade')); } },
   tailwind: { name: '順風', desc: '全隊爆擊率 +20%，到 K 的下個回合', target: 'none',
     run(u) { addGlob('tailwind', u.id, 1); log('順風：全隊爆擊率 +20%（到 K 下個回合）。', 'good'); } },
-  k_bw: { name: 'K 背水', desc: '背水（名字待定）：大群傷（每隻 ' + SKILL_DMG.k_bw.join('~') + '）', target: 'none', bw: true,
+  k_bw: { name: '風暴', desc: '背水：大群傷（每隻 ' + SKILL_DMG.k_bw.join('~') + '）', target: 'none', bw: true,
     run(u) { aliveEnemies().forEach(e => hit(u, e, 'k_bw')); } },
   // L
   frostburst: { name: '霜觸', desc: '近身單傷' + dr('frostburst'), target: 'enemy', run(u, t) { hit(u, t, 'frostburst'); } },

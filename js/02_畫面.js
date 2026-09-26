@@ -157,19 +157,9 @@ function clickSkill(id) {
   if (!myTurn()) return;
   const u = B.cur, s = SKILLS[id];
   if (!s || !skillUsable(u, id)) return;
-  if (s.needsChargeMode) {
-    const fronts = frontAlive();
-    if (!fronts.length) { ui.pending = { type: 'target', id, extra: {} }; render(); return; }
-    ui.pending = { type: 'charge', id }; render(); return;
-  }
   if (s.target === 'enemy') { ui.pending = { type: 'target', id, extra: null }; render(); return; }
   useSkill(u, id, null, null);
   endPlayerTurn();
-}
-function chooseCharge(swapId) {
-  if (!ui.pending || ui.pending.type !== 'charge') return;
-  ui.pending = { type: 'target', id: ui.pending.id, extra: swapId ? { swap: swapId } : {} };
-  render();
 }
 function clickEnemy(id) {
   if (!myTurn() || !ui.pending || ui.pending.type !== 'target') return;
@@ -289,12 +279,6 @@ function renderActions() {
     const p = ui.pending;
     if (p.type === 'target') html += `<div class="prompt">點一隻敵人（${esc(SKILLS[p.id].name)}）</div>`;
     if (p.type === 'med') html += `<div class="prompt">點一名隊友（${p.kind === 'aid' ? '急救' : '回春'}）</div>`;
-    if (p.type === 'charge') {
-      html += '<div class="prompt">突襲：衝進空位，還是跟前排的人對調？</div><div class="btn-row">';
-      html += `<button class="btn" onclick="chooseCharge(null)">衝進空位</button>`;
-      frontAlive().forEach(f => { html += `<button class="btn" ${f.movePt ? '' : 'disabled'} onclick="chooseCharge('${f.id}')">跟 ${esc(f.name)} 對調${f.movePt ? '' : '（沒移動點）'}</button>`; });
-      html += '</div>';
-    }
     if (p.type === 'move') {
       const to = side === 'front' ? '後排' : '前排';
       html += `<div class="prompt">換位：移到${to}空位，還是跟${to}的人對調？（對調會用掉兩人的移動點）</div><div class="btn-row">`;

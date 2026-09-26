@@ -54,7 +54,6 @@ for (let n = 0; n < N; n++) {
           const id = pick(ids), s = G.SKILLS[id];
           if (s.bw) stats.backwater++;
           let extra = null;
-          if (s.needsChargeMode) { const f = G.frontAlive(); extra = Math.random() < 0.5 && f.length ? { swap: pick(f).id } : {}; }
           G.useSkill(u, id, s.target === 'enemy' ? pick(G.aliveEnemies()) : null, extra);
         }
       }
