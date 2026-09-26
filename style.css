@@ -111,6 +111,7 @@ body {
 .badge.heal { background: #4c6b4c; }
 .badge.bw { background: #8a2a33; }
 .badge.warn { background: #7a3b1f; }
+.badge.dimb { background: transparent; border: 1px solid var(--line); color: var(--muted); }
 
 .actions { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin: 6px 0; min-height: 60px; }
 .act-head { margin-bottom: 5px; font-size: 14px; }

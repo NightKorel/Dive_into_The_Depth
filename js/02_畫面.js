@@ -139,7 +139,7 @@ window.addEventListener('error', e => showError(e.error || e.message));
 function myTurn() { return ui.screen === 'battle' && !busy && !B.over && !B.waiting && B.cur && B.cur.side === 'p'; }
 
 // ---- 玩家點擊 ----
-function clickMoveMenu() { if (!myTurn() || B.cur.moved) return; ui.pending = { type: 'move' }; render(); }
+function clickMoveMenu() { if (!myTurn() || !B.cur.movePt) return; ui.pending = { type: 'move' }; render(); }
 function clickMove(opt) {
   if (!myTurn()) return;
   ui.pending = null;
@@ -208,6 +208,7 @@ function badges(u) {
   if (u.ko) return '<span class="badge ko">昏迷</span>';
   if (isND(u)) b.push(`<span class="badge nd">瀕死${u.bwUsed ? '·背水已用' : ''}</span>`);
   if (u.skipNext) b.push('<span class="badge ex">脫力</span>');
+  if (!u.movePt && B.cur !== u) b.push('<span class="badge dimb">移動點已用</span>');
   if (u.guard) b.push('<span class="badge">格擋</span>');
   if (u.charged) b.push('<span class="badge">蓄力</span>');
   if (u.hots.length) b.push(`<span class="badge heal">回春${u.hots.reduce((a, h) => a + h.left, 0)}</span>`);
@@ -277,14 +278,14 @@ function renderActions() {
     if (p.type === 'charge') {
       html += '<div class="prompt">突襲：衝進空位，還是跟前排的人對調？</div><div class="btn-row">';
       html += `<button class="btn" onclick="chooseCharge(null)">衝進空位</button>`;
-      frontAlive().forEach(f => { html += `<button class="btn" onclick="chooseCharge('${f.id}')">跟 ${esc(f.name)} 對調</button>`; });
+      frontAlive().forEach(f => { html += `<button class="btn" ${f.movePt ? '' : 'disabled'} onclick="chooseCharge('${f.id}')">跟 ${esc(f.name)} 對調${f.movePt ? '' : '（沒移動點）'}</button>`; });
       html += '</div>';
     }
     if (p.type === 'move') {
       const to = side === 'front' ? '後排' : '前排';
-      html += `<div class="prompt">換位：移到${to}空位，還是跟${to}的人對調？</div><div class="btn-row">`;
+      html += `<div class="prompt">換位：移到${to}空位，還是跟${to}的人對調？（對調會用掉兩人的移動點）</div><div class="btn-row">`;
       html += `<button class="btn" ${canFlip(u) ? '' : 'disabled'} onclick="clickMove({flip:true})">移到${to}空位</button>`;
-      swapCandidates(u).forEach(o => { html += `<button class="btn" onclick="clickMove({swap:'${o.id}'})">跟 ${esc(o.name)} 對調</button>`; });
+      alivePlayers().filter(o => o !== u && o.row !== side).forEach(o => { html += `<button class="btn" ${o.movePt ? '' : 'disabled'} onclick="clickMove({swap:'${o.id}'})">跟 ${esc(o.name)} 對調${o.movePt ? '' : '（沒移動點）'}</button>`; });
       html += '</div>';
     }
     html += `<button class="btn small ghost" onclick="cancelPending()">取消</button>`;
@@ -294,7 +295,7 @@ function renderActions() {
   const anyUsable = ids.some(id => id && skillUsable(u, id)) || B.med > 0;
   html += `<div class="skill-row ${ids.length === 1 ? 'bw-only' : ''}">${ids.map(id => skillBtn(u, id, side)).join('')}</div>`;
   html += `<div class="btn-row tools">
-    ${u.moved ? '<span class="dim small">已換位</span>' : '<button class="btn small" onclick="clickMoveMenu()">換位</button>'}
+    ${u.movePt ? '<button class="btn small" onclick="clickMoveMenu()">換位</button>' : '<span class="dim small">移動點已用</span>'}
     <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('aid')">急救</button>
     <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('regen')">回春</button>
     <span class="dim small">醫療物 ${B.med}</span>

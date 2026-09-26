@@ -48,7 +48,7 @@ function setupBattle(cfg) {
       id: h.id, side: 'p', name: h.name, color: h.color, data: h,
       maxHp: h.maxHp, hp: h.maxHp, spd: h.spd, crit: h.crit, dodge: h.dodge, row: h.row,
       ko: false, skipNext: false, bwUsed: false, exCount: 0, guard: false, charged: false,
-      hots: [], moved: false, startBack: false,
+      hots: [], movePt: true, startBack: false,   // movePt：移動點，每次輪到自己時刷新
     });
   });
   cfg.dummies.forEach((d, i) => {
@@ -116,7 +116,7 @@ function startTurn(u) {
     return 'skip';
   }
   if (u.side === 'e') return 'enemy';
-  u.moved = false;
+  u.movePt = true;
   u.startBack = u.row === 'back';
   return 'player';
 }
@@ -212,10 +212,10 @@ const SKILLS = {
     run(u) { addGlob('taunt', u.id, 1); log('嘲諷：單攻都會打主角（到他下個回合）。', 'good'); } },
   charge_in: { name: '突襲', desc: '衝上前排單傷，打完留在前排；回合開始就在後排、這回合沒換位才能用' + dr('charge_in'),
     target: 'enemy', needsChargeMode: true,
-    usable(u) { return u.startBack && !u.moved && u.row === 'back'; },
+    usable(u) { return u.startBack && u.movePt && u.row === 'back'; },
     run(u, t, extra) {
-      if (extra && extra.swap) { const o = uById(extra.swap); if (o && !o.ko && o.row === 'front') { o.row = 'back'; if (isND(o)) exhaust(o, false); } }
-      u.row = 'front';
+      if (extra && extra.swap) { const o = uById(extra.swap); if (o && !o.ko && o.row === 'front' && o.movePt) { o.row = 'back'; o.movePt = false; if (isND(o)) exhaust(o, false); } }
+      u.row = 'front'; u.movePt = false;
       hit(u, t, 'charge_in');
     } },
   hold: { name: '不退', desc: '背水：到他下個回合，所有攻擊都衝著他來，每被打一次就反擊；第一擊致命傷留 1 血（反擊 ' + SKILL_DMG.hold_counter.join('~') + '）', target: 'none', bw: true,
@@ -275,20 +275,22 @@ function skillUsable(u, id) {
 
 // ---- 我方行動 ----
 function canFlip(u) { return u.row === 'back' || frontAlive().length > 1; }
-function swapCandidates(u) { return alivePlayers().filter(o => o !== u && o.row !== u.row); }
+// 移動點（像 DnD 的移動速度）：每人一點，輪到自己時刷新；只能在自己行動前用。
+// 對調＝兩個人都花掉移動點，所以想等一下被隊友換走的人，自己這回合就不能先動。敵人造成的移位、昏迷補位不算。
+function swapCandidates(u) { return alivePlayers().filter(o => o !== u && o.row !== u.row && o.movePt); }
 // opt: {flip:true} 或 {swap:id}；回傳 true＝自己脫力，這回合結束
 function doMove(u, opt) {
-  if (u.moved) return false;
+  if (!u.movePt) return false;
   const moved = [u];
   if (opt.swap) {
     const o = uById(opt.swap);
-    if (!o || o.ko || o.row === u.row) return false;
-    const r = u.row; u.row = o.row; o.row = r; moved.push(o);
+    if (!o || o.ko || o.row === u.row || !o.movePt) return false;
+    const r = u.row; u.row = o.row; o.row = r; o.movePt = false; moved.push(o);
   } else {
     if (!canFlip(u)) return false;
     u.row = u.row === 'front' ? 'back' : 'front';
   }
-  u.moved = true;
+  u.movePt = false;
   log(`${u.name} 移到${u.row === 'front' ? '前排' : '後排'}。`, 'dim');
   let selfEx = false;
   moved.forEach(m => {
