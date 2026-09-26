@@ -148,6 +148,10 @@ body {
 .cheat summary { cursor: pointer; }
 #errBox { display: none; position: sticky; top: 0; z-index: 10; background: #7a1f28; color: #fff; padding: 8px 12px; font-size: 13px; }
 
+/* 長按／滑過提示 */
+#tip { display: none; position: fixed; z-index: 50; max-width: 260px; background: #0f1218; color: var(--fg); border: 1px solid var(--accent); border-radius: 6px; padding: 7px 9px; font-size: 12px; line-height: 1.5; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,0.5); }
+[data-tip] { -webkit-touch-callout: none; user-select: none; }
+
 /* ☰ 選單與設定 */
 .center { text-align: center; }
 .menu-box { text-align: left; }

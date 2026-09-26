@@ -287,18 +287,27 @@ function hpBar(u) {
   const nd = u.side === 'p' && isND(u);
   return `<div class="hpbar ${nd ? 'nd' : ''} ${u.side === 'e' ? 'enemy' : ''}"><div class="fill" style="width:${w}%"></div><div class="line"></div></div>`;
 }
+// 狀態標籤：看得到名字就好，詳細說明做成「長按（手機）／滑過去（電腦）」才出現的提示（data-tip）
+function tipAttr(t) { return ` data-tip="${esc(t)}"`; }
+function badge(cls, text, tip) { return `<span class="badge ${cls}"${tipAttr(tip)}>${text}</span>`; }
+function exhaustTip(u) {
+  const nm = u.id === 'hero' ? (u.exFirst ? '振作' : '硬撐') : '脫力';
+  const amt = u.id === 'hero' ? `血量加上 ${u.exFirst ? 40 : 20}%` : `血量拉到 ${u.exFirst ? 40 : 20}%`;
+  const when = u.exState === 'down' ? '下次輪到他：空過一回合；再下一次輪到，回合開始才回血' : '下次輪到他，回合開始先回血，然後照常行動';
+  return `${nm}中：${when}（${amt}）。脫力中不能上前排；前排還有人時，敵人選不到他。`;
+}
 function badges(u) {
   const b = [];
-  if (u.ko) return '<span class="badge ko">昏迷</span>';
-  if (isND(u)) b.push(`<span class="badge nd">瀕死${u.bwUsed ? '·背水已用' : ''}</span>`);
-  if (u.evade) b.push('<span class="badge heal">閃避待命</span>');
-  if (u.mustRetreat) b.push('<span class="badge warn">背水後要撤退</span>');
-  if (u.exState) b.push(`<span class="badge ex">${u.id === 'hero' ? (u.exFirst ? '振作中' : '硬撐中') : '脫力'}</span>`);
-  if (u.guard) b.push('<span class="badge">格擋</span>');
-  if (u.ambush) b.push('<span class="badge">偷襲待命</span>');
-  if (u.hots.length) b.push(`<span class="badge heal">回春${u.hots.reduce((a, h) => a + h.left, 0)}</span>`);
+  if (u.ko) return badge('ko', '昏迷', '血量歸零，這場不能再行動。');
+  if (isND(u)) b.push(badge('nd', `瀕死${u.bwUsed ? '·背水已用' : ''}`, '血量低於 20%。站前排時，前排兩招會變成背水（每次瀕死只能用一次）；在後排進入瀕死、或瀕死時退到後排會脫力。'));
+  if (u.evade) b.push(badge('heal', '閃避待命', '靈巧：到他下次輪到前，第一次被打一定閃掉。'));
+  if (u.mustRetreat) b.push(badge('warn', '背水後要撤退', '用過背水，下次輪到他時必須先撤到後排（或跟後排的人對調）。瀕死撤退會脫力。'));
+  if (u.exState) b.push(badge('ex', u.id === 'hero' ? (u.exFirst ? '振作中' : '硬撐中') : '脫力', exhaustTip(u)));
+  if (u.guard) b.push(badge('', '格擋', '下一次受到的傷害減 50%。'));
+  if (u.ambush) b.push(badge('', '偷襲待命', '到他下次回合前，第一個攻擊的敵人出手前會先被捅一刀。'));
+  if (u.hots.length) b.push(badge('heal', `回春${u.hots.reduce((a, h) => a + h.left, 0)}`, '回春：之後每次輪到他，回合開始回 15%，數字是剩幾次。'));
   const tg = getGlob('taunt');
-  if (tg && tg.owner === u.id) b.push(`<span class="badge bw">${tg.counter ? '不退' : '嘲諷'}</span>`);
+  if (tg && tg.owner === u.id) b.push(tg.counter ? badge('bw', '不退', '到他下個回合：所有攻擊都衝著他來，每被打一次反擊；第一擊致命傷留 1 血。') : badge('bw', '嘲諷', '到他下個回合：敵人的單攻都打他。'));
   return b.join('');
 }
 // 順序條：目前行動的人放大在最前面，後面一排小圓點
@@ -308,7 +317,7 @@ function renderOrder() {
     if (!u) return '';
     const col = u.side === 'p' ? u.color : '#bf616a';
     const cls = i === 0 ? 'now' : '';
-    return `${i === 1 ? '<span class="ord-sep">›</span>' : ''}<span class="ord ${cls} ${u.skipNext || u.exState === 'down' ? 'skip' : ''} ${u.side}" style="--c:${col}">${esc(shortName(u))}</span>`;
+    return `${i === 1 ? '<span class="ord-sep">›</span>' : ''}<span class="ord ${cls} ${u.skipNext || u.exState === 'down' ? 'skip' : ''} ${u.side}" style="--c:${col}"${tipAttr(u.name + (i === 0 ? '：現在行動' : '') + (u.skipNext || u.exState === 'down' ? '（這次會空過）' : ''))}>${esc(shortName(u))}</span>`;
   }).join('');
 }
 function renderEnemies() {
@@ -316,7 +325,7 @@ function renderEnemies() {
   return enemies().map(e => {
     const next = e.pattern.length ? e.pattern[e.pi % e.pattern.length] : 'idle';
     const charging = !e.ko && next === 'group';
-    const tags = (e.skipNext ? '<span class="badge ex">凍住</span>' : '') + (charging ? '<span class="badge warn">蓄力中……</span>' : '');
+    const tags = (e.skipNext ? badge('ex', '凍住', '下一次行動空過。') : '') + (charging ? badge('warn', '蓄力中……', '牠在蓄力，準備放大招。') : '');
     return `<div class="card enemy ${e.ko ? 'dead' : ''} ${charging ? 'charging' : ''} ${targeting && !e.ko ? 'targetable' : ''} ${B.cur === e ? 'acting' : ''}"
       data-id="${e.id}" onclick="clickEnemy('${e.id}')">
       <div class="crow"><span class="cname">${esc(e.name)}</span><span class="hpnum">${e.ko ? '倒下' : e.hp}</span></div>
@@ -334,7 +343,7 @@ function renderPartyRow(row) {
     const bd = badges(p);
     return `<div class="card ally ${p.ko ? 'dead' : ''} ${B.cur === p ? 'acting' : ''} ${pickable ? 'targetable' : ''}"
       data-id="${p.id}" style="--c:${p.color}" onclick="clickAlly('${p.id}')">
-      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${p.ko ? '' : `<span class="mv ${p.movePt ? '' : 'used'}" title="${p.movePt ? '還有移動點' : '移動點用掉了'}">🔁</span>`}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
+      <div class="crow"><span class="cname" style="color:${p.color}"${tipAttr(p.name + '｜' + p.data.trait)}>${esc(p.name)}${p.ko ? '' : `<span class="mv ${p.movePt ? '' : 'used'}"${tipAttr(p.movePt ? '移動點：還有。可以在自己行動前換位，也可以被隊友換。' : '移動點：用掉了。下次輪到他才會回來。')}>🔁</span>`}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
       ${hpBar(p)}${bd ? `<div class="badges">${bd}</div>` : ''}
     </div>`;
   }).join('');
@@ -346,7 +355,7 @@ function skillBtn(u, id, side) {
   }
   const s = SKILLS[id];
   const ok = skillUsable(u, id);
-  return `<button class="btn skill ${s.bw ? 'bw' : ''}" ${ok ? '' : 'disabled'} onclick="clickSkill('${id}')">
+  return `<button class="btn skill ${s.bw ? 'bw' : ''}" ${ok ? '' : 'disabled'} onclick="clickSkill('${id}')"${tipAttr(s.name + '：' + s.desc)}>
     <b>${esc(s.name)}</b><small>${esc(s.desc)}</small></button>`;
 }
 function renderActions() {
@@ -460,3 +469,34 @@ function cheatFull() {
 function cheatEnemyLow() { aliveEnemies().forEach(e => { e.hp = 1; }); log('（測試）敵人全剩 1 血。', 'dim'); render(); }
 function cheatRound() { B.round += 5; log(`（測試）跳到第 ${B.round} 輪。`, 'dim'); render(); }
 function cheatMed() { B.med += 3; log('（測試）醫療物 +3。', 'dim'); render(); }
+
+// ================= 長按（手機）／滑過去（電腦）顯示提示 =================
+// 任何有 data-tip 的東西都適用。長按跳出提示時，會吃掉接著的那次點擊，避免誤觸。
+(function () {
+  let timer = null, shownByPress = false;
+  const tip = () => document.getElementById('tip');
+  function show(el) {
+    const t = el.getAttribute('data-tip'); if (!t) return;
+    const box = tip(); box.textContent = t; box.style.display = 'block';
+    const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
+    let left = r.left + r.width / 2 - w / 2; left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    let top = r.top - h - 8; if (top < 8) top = r.bottom + 8;
+    box.style.left = left + 'px'; box.style.top = top + 'px';
+  }
+  function hide() { const box = tip(); if (box) box.style.display = 'none'; }
+  document.addEventListener('pointerdown', e => {
+    hide(); shownByPress = false;
+    const el = e.target.closest('[data-tip]'); if (!el) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => { show(el); shownByPress = true; }, 450);
+  });
+  ['pointerup', 'pointercancel', 'pointermove'].forEach(ev => document.addEventListener(ev, e => {
+    if (ev === 'pointermove' && e.pointerType === 'mouse') return;
+    clearTimeout(timer);
+    if (ev !== 'pointermove' && shownByPress) setTimeout(hide, 1500);
+  }));
+  document.addEventListener('click', e => { if (shownByPress) { e.stopPropagation(); e.preventDefault(); shownByPress = false; } }, true);
+  document.addEventListener('contextmenu', e => { if (e.target.closest('[data-tip]')) e.preventDefault(); });
+  document.addEventListener('mouseover', e => { const el = e.target.closest('[data-tip]'); if (el) show(el); });
+  document.addEventListener('mouseout', e => { if (e.target.closest('[data-tip]')) hide(); });
+})();
