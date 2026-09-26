@@ -139,13 +139,13 @@ function exhaust(u, onOwnTurn) {
     const add = pctOf(u, first ? EXHAUST_FIRST : EXHAUST_LATER);
     const before = u.hp;
     u.hp = Math.min(u.maxHp, u.hp + add);
-    log(`主角${first ? '振作' : '硬撐'}起來了！（+${u.hp - before}）`, 'heal');
+    log(`主角${first ? '振作' : '硬撐'}：血量 +${u.hp - before}，空過一回合。`, 'heal');
     fx(u.id, (first ? '振作 +' : '硬撐 +') + (u.hp - before), 'heal');
   } else {
     const target = pctOf(u, first ? EXHAUST_FIRST : EXHAUST_LATER);
     const before = u.hp;
     if (u.hp < target) u.hp = target;
-    log(`${u.name} 脫力了，喘一口氣撐起來。（血量回到 ${u.hp}）`, 'heal');
+    log(`${u.name} 脫力：血量回到 ${u.hp}，空過一回合。`, 'heal');
     fx(u.id, '脫力 +' + (u.hp - before), 'heal');
   }
   if (!isND(u)) u.bwUsed = false;
@@ -166,7 +166,7 @@ function damagePlayer(p, d, src) {
     const tg = getGlob('taunt');
     if (tg && tg.lock && tg.owner === p.id) {
       p.hp = 1; tg.lock = false;
-      log(`${p.name} 咬牙撐住，留下 1 血！`, 'good');
+      log(`不退：${p.name} 撐住，留下 1 血！`, 'good');
       fx(p.id, '撐住！', 'good');
     } else { knockOut(p); return; }
   }
@@ -206,7 +206,7 @@ const SKILLS = {
   // 主角
   slash: { name: '劈斬', desc: '單傷 12', target: 'enemy', run(u, t) { hit(u, t, 12); } },
   taunt: { name: '嘲諷', desc: '嘲諷全體敵人（單攻都打他），到他下個回合', target: 'none',
-    run(u) { addGlob('taunt', u.id, 1); log('主角嘲諷全場，敵人都盯上他了。', 'good'); } },
+    run(u) { addGlob('taunt', u.id, 1); log('嘲諷：單攻都會打主角（到他下個回合）。', 'good'); } },
   charge_in: { name: '突襲', desc: '衝上前排攻擊，單傷 18，打完留在前排（回合開始就在後排、這回合沒移動才能用）',
     target: 'enemy', needsChargeMode: true,
     usable(u) { return u.startBack && !u.moved && u.row === 'back'; },
@@ -216,15 +216,15 @@ const SKILLS = {
       hit(u, t, 18);
     } },
   hold: { name: '不退', desc: '背水：到他下個回合，所有攻擊都衝著他來，每被打一次反擊 8；第一擊致命傷留 1 血', target: 'none', bw: true,
-    run(u) { addGlob('taunt', u.id, 1, { counter: true, lock: true }); log('主角：「想過去？先過我這關！」', 'good'); } },
+    run(u) { addGlob('taunt', u.id, 1, { counter: true, lock: true }); log('主角：「想過去？先過我這關！」（佔位）', 'good'); } },
   // V
   guard: { name: '格擋', desc: '下一次受到的傷害減 50%', target: 'none',
-    run(u) { u.guard = true; log('V 擺出格擋架勢。'); } },
+    run(u) { u.guard = true; log('格擋：V 下一次受傷減半。'); } },
   rend: { name: '割裂', desc: '單傷 14', target: 'enemy', run(u, t) { hit(u, t, 14); } },
   knives: { name: '飛刀', desc: '擲三把，隨機打敵人，每把 5、爆擊率 30%', target: 'none',
     run(u) { for (let i = 0; i < 3; i++) { const es = aliveEnemies(); if (!es.length) break; hit(u, pick(es), 5, { crit: 0.3 }); } } },
   focus: { name: '蓄力', desc: '下一次攻擊必定爆擊（飛刀三把都算）', target: 'none',
-    run(u) { u.charged = true; log('V 屏息蓄力。'); } },
+    run(u) { u.charged = true; log('蓄力：V 下一招必定爆擊。'); } },
   bladedance: { name: '刀舞', desc: '背水：單傷 16、爆擊率 50%，擊殺就再攻擊一次（隨機目標），可以一直連下去', target: 'enemy', bw: true,
     run(u, t) {
       let target = t, n = 0;
@@ -232,29 +232,29 @@ const SKILLS = {
         const r = hit(u, target, 16, { crit: 0.5 }); n++;
         if (!r || !r.kill) break;
         const es = aliveEnemies(); target = es.length ? pick(es) : null;
-        if (target) log('刀舞沒有停下來！', 'good');
+        if (target) log('刀舞擊殺，再攻擊一次！', 'good');
       }
     } },
   // K
   double: { name: '雙擊', desc: '單傷 6，打兩下', target: 'enemy', run(u, t) { hit(u, t, 6); hit(u, t, 6); } },
   dust: { name: '揚塵', desc: '全體敵人 20% 失手，持續兩回合（到 K 的第二個下回合）', target: 'none',
-    run(u) { addGlob('dust', u.id, 2); log('K 揚起一陣塵土。'); } },
+    run(u) { addGlob('dust', u.id, 2); log('揚塵：敵人 20% 失手（兩回合）。'); } },
   windblade: { name: '風刃', desc: '群傷，每隻 7', target: 'none',
     run(u) { aliveEnemies().forEach(e => hit(u, e, 7)); } },
   tailwind: { name: '順風', desc: '全隊傷害 +30%，到 K 的下個回合', target: 'none',
-    run(u) { addGlob('tailwind', u.id, 1); log('K 喚來順風。', 'good'); } },
+    run(u) { addGlob('tailwind', u.id, 1); log('順風：全隊傷害 +30%（到 K 下個回合）。', 'good'); } },
   k_bw: { name: 'K 背水', desc: '背水（名字待定）：大群傷，每隻 16', target: 'none', bw: true,
     run(u) { aliveEnemies().forEach(e => hit(u, e, 16)); } },
   // L
   frostburst: { name: '霜爆', desc: '近身單傷 16', target: 'enemy', run(u, t) { hit(u, t, 16); } },
   icespike: { name: '冰刺', desc: '單傷 20（全隊最高）', target: 'enemy', run(u, t) { hit(u, t, 20); } },
   freeze: { name: '凍結', desc: '一隻敵人的下一次行動往後推一格', target: 'enemy',
-    run(u, t) { pushBack(t.id); log(`${t.name} 被凍得慢了一拍。`); fx(t.id, '往後一格', 'miss'); } },
+    run(u, t) { pushBack(t.id); log(`凍結：${t.name} 的下一次行動往後一格。`); fx(t.id, '往後一格', 'miss'); } },
   bloodfrost: { name: '血霜花', desc: '背水：全體敵人各吃 8，每隻 50% 被凍住（跳過下一次行動）', target: 'none', bw: true,
     run(u) {
       aliveEnemies().forEach(e => {
         const r = hit(u, e, 8);
-        if (r && !r.kill && rnd() < 0.5) { e.skipNext = true; log(`${e.name} 被凍住了！`, 'good'); fx(e.id, '凍住', 'miss'); }
+        if (r && !r.kill && rnd() < 0.5) { e.skipNext = true; log(`${e.name} 被凍住（空過下一次行動）。`, 'good'); fx(e.id, '凍住', 'miss'); }
       });
     } },
 };
@@ -314,7 +314,7 @@ function useMed(u, kind, t) {
     log(`${u.name} 替 ${t.name} 急救。`, 'act');
     heal(t, pctOf(t, FIRST_AID) + bonus, u.id === 'k' ? '急救＋治癒' : '急救');
   } else {
-    log(`${u.name} 替 ${t.name} 上回春藥。`, 'act');
+    log(`${u.name} 替 ${t.name} 用回春（之後 3 回合各回 15%）。`, 'act');
     if (bonus) heal(t, bonus, '治癒');
     t.hots.push({ pct: REGEN, left: REGEN_TICKS });
   }
@@ -337,36 +337,36 @@ function enemyAct(e) {
   } else if (act === 'group') {
     const f = frontAlive();
     const mul = f.length === 1 ? GROUP_SOLO_MUL : 1;
-    log(`${e.name} 橫掃前排！${mul > 1 ? '（前排只有一人，×1.7）' : ''}`, 'enemy');
+    log(`${e.name} 群攻前排！${mul > 1 ? '（前排只有一人，×1.7）' : ''}`, 'enemy');
     for (const p of f) { if (e.ko) break; attackPlayer(e, p, e.dmg * GROUP_RATIO, mul); }
   } else if (act === 'swap') {
     const onlyFront = frontAlive().length === 1 ? frontAlive()[0] : null;
     const cands = alivePlayers().filter(p => p !== onlyFront);
-    if (!cands.length) { log(`${e.name} 想推人，沒推動。`, 'dim'); return; }
+    if (!cands.length) { log(`${e.name} 換位失敗（沒有能換的人）。`, 'dim'); return; }
     const t = pick(cands);
     t.row = t.row === 'front' ? 'back' : 'front';
-    log(`${e.name} 把 ${t.name} ${t.row === 'front' ? '拖到前排' : '推到後排'}！`, 'enemy');
+    log(`${e.name} 把 ${t.name} 換到${t.row === 'front' ? '前排' : '後排'}！`, 'enemy');
     fx(t.id, t.row === 'front' ? '被拖上前' : '被推回去', 'miss');
     if (t.row === 'back' && isND(t)) exhaust(t, false);
   } else if (act === 'push') {
     const t = pick(alivePlayers());
     if (!t) return;
     pushBack(t.id);
-    log(`${e.name} 打亂了 ${t.name} 的節奏（順序往後一格）。`, 'enemy');
+    log(`${e.name} 把 ${t.name} 的下一次行動往後一格。`, 'enemy');
     fx(t.id, '往後一格', 'miss');
   }
 }
 function attackPlayer(e, p, base, mul) {
   if (p.ko) return;
-  if (getGlob('dust') && rnd() < DUST_MISS) { log(`${e.name} 失手了！（揚塵）`, 'good'); fx(p.id, 'MISS', 'miss'); return; }
-  if (p.dodge && rnd() < p.dodge) { log(`${p.name} 閃開了！`, 'good'); fx(p.id, '閃避', 'miss'); return; }
+  if (getGlob('dust') && rnd() < DUST_MISS) { log(`${e.name} 失手（揚塵）。`, 'good'); fx(p.id, 'MISS', 'miss'); return; }
+  if (p.dodge && rnd() < p.dodge) { log(`${p.name} 閃避（靈巧）。`, 'good'); fx(p.id, '閃避', 'miss'); return; }
   let d = base * mul * (1 - ENEMY_SWING + rnd() * ENEMY_SWING * 2) * dmgMul();
   d = Math.max(1, Math.floor(d));
   if (p.guard) { d = Math.floor(d * 0.5); p.guard = false; log(`${p.name} 格擋，傷害減半。`, 'good'); }
   damagePlayer(p, d, e);
   const tg = getGlob('taunt');
   if (tg && tg.counter && tg.owner === p.id && !p.ko && !e.ko) {
-    log('主角反擊！', 'good');
+    log('不退：主角反擊！', 'good');
     hit(p, e, 8);
   }
 }

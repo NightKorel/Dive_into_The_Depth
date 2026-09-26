@@ -4,7 +4,7 @@
    ======================================================== */
 
 const ui = { screen: 'setup', pending: null, cfg: null };
-const CFG_KEY = 'yuan2_dummy_cfg_v1';
+const CFG_KEY = 'yuan2_dummy_cfg_v2';  // 預設組合改過數值就換版本號，舊設定才不會蓋掉新預設
 const $ = sel => document.querySelector(sel);
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -39,7 +39,7 @@ function renderSetup() {
     return `<div class="dummy-card ${s.on ? '' : 'off'}">
       <label class="dummy-head"><input type="checkbox" ${s.on ? 'checked' : ''} onchange="toggleDummy(${i},this.checked)"> 木樁 ${i + 1}</label>
       <div class="slider-row"><span>血量</span><input type="range" min="50" max="600" step="10" value="${s.hp}" ${s.on ? '' : 'disabled'} oninput="setVal(${i},'hp',this.value)"><b id="hp${i}">${s.hp}</b></div>
-      <div class="slider-row"><span>攻擊</span><input type="range" min="4" max="40" step="1" value="${s.dmg}" ${s.on ? '' : 'disabled'} oninput="setVal(${i},'dmg',this.value)"><b id="dmg${i}">${s.dmg}</b></div>
+      <div class="slider-row"><span>攻擊</span><input type="range" min="4" max="60" step="1" value="${s.dmg}" ${s.on ? '' : 'disabled'} oninput="setVal(${i},'dmg',this.value)"><b id="dmg${i}">${s.dmg}</b></div>
       <div class="pattern">${[0, 1, 2, 3].map(sel).join('<span class="arrow">→</span>')}</div>
     </div>`;
   }).join('');
@@ -72,12 +72,27 @@ function beginBattle() {
   const dummies = ui.cfg.slots.filter(s => s.on).map(s => ({ hp: s.hp, dmg: s.dmg, pattern: s.pattern.slice() }));
   if (!dummies.length) return;
   setupBattle({ dummies, med: ui.cfg.med });
+  battleId++;
   ui.screen = 'battle'; ui.pending = null;
-  nextTurn();
+  guard(nextTurn);
 }
 let busy = false;
+// 每場戰鬥一個編號：重打／撤離後，上一場還沒跑完的計時器看到編號不同就自己停下（避免兩條回合流程同時跑）
+let battleId = 0;
+let lastProgress = Date.now();
+function later(fn, ms) { const id = battleId; setTimeout(() => { if (id === battleId && ui.screen === 'battle') guard(fn); }, ms); }
+// 包一層防護：出錯時把錯誤顯示在畫面上，並嘗試繼續，不讓整個遊戲停住
+function guard(fn) {
+  try { fn(); } catch (err) { showError(err); busy = false; later(nextTurn, 600); }
+}
+function showError(err) {
+  console.error(err);
+  const box = $('#errBox');
+  if (box) { box.textContent = '出錯了（請截圖給 Claude）：' + (err && err.stack ? err.stack.split('\n').slice(0, 3).join(' ／ ') : err); box.style.display = 'block'; }
+}
 function nextTurn() {
   if (ui.screen !== 'battle') return;
+  lastProgress = Date.now();
   if (B.over || B.waiting) { render(); return; }
   advance();
   const r = startTurn(B.cur);
@@ -85,13 +100,12 @@ function nextTurn() {
   busy = r !== 'player';
   render();
   if (r === 'player') return;
-  if (r === 'skip') { checkAfterAction(); setTimeout(nextTurn, 500); return; }
-  setTimeout(() => {
-    if (ui.screen !== 'battle') return;
+  if (r === 'skip') { checkAfterAction(); later(nextTurn, 500); return; }
+  later(() => {
     enemyAct(B.cur);
     checkAfterAction();
     render();
-    setTimeout(nextTurn, 450);
+    later(nextTurn, 450);
   }, 550);
 }
 function endPlayerTurn() {
@@ -99,8 +113,18 @@ function endPlayerTurn() {
   ui.pending = null;
   checkAfterAction();
   render();
-  setTimeout(nextTurn, 300);
+  later(nextTurn, 300);
 }
+// 看門狗：流程卡住超過 4 秒（不是在等玩家、也不是戰鬥結束或等人頂上），就自動往下走
+setInterval(() => {
+  if (ui.screen !== 'battle' || !busy || B.over || B.waiting) return;
+  if (Date.now() - lastProgress > 4000) {
+    log('（看門狗：流程卡住，自動恢復）', 'dim');
+    busy = false;
+    guard(nextTurn);
+  }
+}, 1000);
+window.addEventListener('error', e => showError(e.error || e.message));
 function myTurn() { return ui.screen === 'battle' && !busy && !B.over && !B.waiting && B.cur && B.cur.side === 'p'; }
 
 // ---- 玩家點擊 ----
@@ -153,10 +177,10 @@ function chooseStepUp(id) {
   if (!B.waiting) return;
   if (!stepUp(id)) return;
   render();
-  setTimeout(nextTurn, 300);
+  later(nextTurn, 300);
 }
-function retryBattle() { setupBattle(B.cfg); ui.screen = 'battle'; ui.pending = null; nextTurn(); }
-function backToSetup() { ui.screen = 'setup'; busy = false; renderSetup(); }
+function retryBattle() { setupBattle(B.cfg); battleId++; ui.screen = 'battle'; ui.pending = null; guard(nextTurn); }
+function backToSetup() { battleId++; ui.screen = 'setup'; busy = false; renderSetup(); }
 
 // ================= 戰鬥畫面 =================
 function hpBar(u) {
@@ -264,7 +288,7 @@ function renderResult() {
   if (!B.over) return '';
   if (B.over === 'win') return `<div class="modal"><div class="modal-box"><h2>勝利！</h2><p>打了 ${B.round} 輪。</p>
     <button class="btn primary" onclick="retryBattle()">再打一次</button><button class="btn" onclick="backToSetup()">回木樁設定</button></div></div>`;
-  return `<div class="modal"><div class="modal-box"><h2>全滅</h2><p>怪物對吃人沒興趣，牠們走了。</p>
+  return `<div class="modal"><div class="modal-box"><h2>全滅</h2><p>怪物對吃人沒興趣，牠們走了。（佔位）</p>
     <button class="btn primary" onclick="retryBattle()">重打</button><button class="btn" onclick="backToSetup()">撤離</button></div></div>`;
 }
 function render() {
@@ -284,6 +308,16 @@ function render() {
       </div>
       <div class="actions">${renderActions()}</div>
       <div class="log">${logs}</div>
+      <details class="cheat" ${ui.cheatOpen ? 'open' : ''} ontoggle="ui.cheatOpen=this.open">
+        <summary>測試用按鈕</summary>
+        <div class="btn-row"><span class="lbl">打到瀕死（10%）</span>${players().filter(p => !p.ko).map(p => `<button class="btn small" onclick="cheatND('${p.id}')">${esc(p.name)}</button>`).join('')}</div>
+        <div class="btn-row">
+          <button class="btn small" onclick="cheatFull()">我方全員回滿</button>
+          <button class="btn small" onclick="cheatEnemyLow()">敵人全剩 1 血</button>
+          <button class="btn small" onclick="cheatRound()">輪數 +5</button>
+          <button class="btn small" onclick="cheatMed()">醫療物 +3</button>
+        </div>
+      </details>
     </div>${renderResult()}`;
   flushFloats();
 }
@@ -306,3 +340,20 @@ function flushFloats() {
     setTimeout(() => f.remove(), 1100);
   });
 }
+
+// ================= 測試用按鈕（給測試員；規則：作弊選單要保留） =================
+function cheatND(id) {
+  const p = uById(id);
+  if (!p || p.ko) return;
+  const target = Math.max(1, Math.floor(p.maxHp * 0.1));
+  log(`（測試）把 ${p.name} 打到瀕死。`, 'dim');
+  if (p.hp > target) damagePlayer(p, p.hp - target, null);
+  render();
+}
+function cheatFull() {
+  alivePlayers().forEach(p => { p.hp = p.maxHp; p.bwUsed = false; });
+  log('（測試）我方全員回滿。', 'dim'); render();
+}
+function cheatEnemyLow() { aliveEnemies().forEach(e => { e.hp = 1; }); log('（測試）敵人全剩 1 血。', 'dim'); render(); }
+function cheatRound() { B.round += 5; log(`（測試）跳到第 ${B.round} 輪。`, 'dim'); render(); }
+function cheatMed() { B.med += 3; log('（測試）醫療物 +3。', 'dim'); render(); }

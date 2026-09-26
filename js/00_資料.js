@@ -50,27 +50,29 @@ const DUMMY_ACTIONS = {
 };
 
 // 預設組合（木樁設定面板一鍵套用）
+// 強度抓法（2026-09-26）：亂按的測試大約會輸一到四成、一般組合 5 到 7 輪（會想的人會更快），
+// 前排大約挨 3 到 4 下就進瀕死，背水那一套才測得到。沙包不打人，專門測傷害。
 const DUMMY_PRESETS = [
   { name: '沙包', dummies: [
     { hp: 400, dmg: 10, pattern: ['idle', 'idle', 'idle', 'idle'] },
   ] },
   { name: '單攻木樁', dummies: [
-    { hp: 150, dmg: 14, pattern: ['single', 'single', 'single', 'single'] },
-    { hp: 150, dmg: 14, pattern: ['single', 'single', 'single', 'single'] },
+    { hp: 100, dmg: 30, pattern: ['single', 'single', 'single', 'single'] },
+    { hp: 100, dmg: 30, pattern: ['single', 'single', 'single', 'single'] },
   ] },
   { name: '群攻木樁', dummies: [
-    { hp: 180, dmg: 24, pattern: ['group', 'group', 'group', 'group'] },
+    { hp: 200, dmg: 48, pattern: ['group', 'group', 'group', 'group'] },
   ] },
   { name: '打打群群', dummies: [
-    { hp: 150, dmg: 16, pattern: ['single', 'single', 'group', 'group'] },
-    { hp: 150, dmg: 16, pattern: ['group', 'group', 'single', 'single'] },
+    { hp: 100, dmg: 30, pattern: ['single', 'single', 'group', 'group'] },
+    { hp: 100, dmg: 30, pattern: ['group', 'group', 'single', 'single'] },
   ] },
   { name: '搗亂組', dummies: [
-    { hp: 120, dmg: 12, pattern: ['single', 'swap', 'single', 'push'] },
-    { hp: 120, dmg: 12, pattern: ['push', 'single', 'swap', 'group'] },
-    { hp: 120, dmg: 12, pattern: ['single', 'group', 'push', 'swap'] },
+    { hp: 80, dmg: 26, pattern: ['single', 'swap', 'single', 'push'] },
+    { hp: 80, dmg: 26, pattern: ['push', 'single', 'swap', 'group'] },
+    { hp: 80, dmg: 26, pattern: ['single', 'group', 'push', 'swap'] },
   ] },
   { name: '大木樁', dummies: [
-    { hp: 500, dmg: 22, pattern: ['single', 'single', 'group', 'swap'] },
+    { hp: 450, dmg: 46, pattern: ['single', 'single', 'group', 'swap'] },
   ] },
 ];
