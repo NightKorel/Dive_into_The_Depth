@@ -4,7 +4,9 @@
    做什麼：用每個木樁預設組合，讓程式亂按（亂移動、亂放技能、亂用醫療物）打很多場，
           途中一直檢查不該發生的事：血量超出範圍、昏迷的人還在順序條、活著的人不在順序條、
           順序條有重複、前排沒人卻沒要求頂上、戰鬥打不完。任何一條出錯就報錯並結束。
-   注意：它只檢查「會不會壞」，不檢查「平不平衡」。
+   另外會印出「各組合的戰後血量分布」：每場打完，每個角色剩下的血量落在
+   昏迷／30% 以下／30~70%／70% 以上 哪一格（贏的場才算，輸了本來就全昏迷）。
+   注意：出招是亂按的，比真人笨很多，數字只能當相對參考（例如改數值前後比較）。
    ======================================================== */
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const JS = path.join(__dirname, '..', 'js');
@@ -19,6 +21,9 @@ const G = ctx.__, B = G.B;
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const N = +process.argv[2] || 2000;
 const stats = { win: 0, lose: 0, rounds: 0, backwater: 0 };
+// 戰後血量分布：per[組合名][角色名] = [昏迷, <30%, 30~70%, >70%]（只算贏的場）
+const per = {};
+const bucket = p => p.ko ? 0 : (p.hp / p.maxHp < 0.3 ? 1 : (p.hp / p.maxHp <= 0.7 ? 2 : 3));
 
 for (let n = 0; n < N; n++) {
   const preset = G.DUMMY_PRESETS[n % G.DUMMY_PRESETS.length];
@@ -70,5 +75,23 @@ for (let n = 0; n < N; n++) {
   }
   stats[B.over]++;
   stats.rounds += B.round;
+  const pr = per[preset.name] = per[preset.name] || { n: 0, win: 0, rounds: 0, heroes: {} };
+  pr.n++; pr.rounds += B.round;
+  if (B.over === 'win') {
+    pr.win++;
+    B.units.filter(u => u.side === 'p').forEach(p => {
+      const h = pr.heroes[p.name] = pr.heroes[p.name] || [0, 0, 0, 0];
+      h[bucket(p)]++;
+    });
+  }
 }
+const pct = (a, b) => (b ? Math.round(a / b * 100) : 0) + '%';
+console.log('\n戰後血量分布（贏的場；昏迷／30% 以下／30~70%／70% 以上）');
+for (const [name, pr] of Object.entries(per)) {
+  console.log(`\n【${name}】勝率 ${pct(pr.win, pr.n)}，平均 ${(pr.rounds / pr.n).toFixed(1)} 輪`);
+  for (const [hero, h] of Object.entries(pr.heroes)) {
+    console.log(`  ${hero.padEnd(3, '　')} ${h.map(x => pct(x, pr.win).padStart(4)).join('  ')}`);
+  }
+}
+console.log('');
 console.log(`冒煙測試通過：${N} 場，勝 ${stats.win}／敗 ${stats.lose}，平均 ${(stats.rounds / N).toFixed(1)} 輪，背水 ${stats.backwater} 次（亂按的結果，不代表平衡）`);
