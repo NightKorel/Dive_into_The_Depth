@@ -244,7 +244,7 @@ const SKILLS = {
       u.row = 'front'; u.movePt = false;
       hit(u, t, 'charge_in');
     } },
-  hero_b2: { name: '主角後排 2', desc: '（名字待定）全體超小傷害，並打斷蓄力中的敵人（跳過牠下一記群攻）（每隻 ' + SKILL_DMG.hero_b2.join('~') + '）', target: 'none',
+  hero_b2: { name: '干擾', desc: '全體超小傷害，並打斷蓄力中的敵人（跳過牠下一記群攻）（每隻 ' + SKILL_DMG.hero_b2.join('~') + '）', target: 'none',
     run(u) {
       aliveEnemies().forEach(e => {
         hit(u, e, 'hero_b2');
