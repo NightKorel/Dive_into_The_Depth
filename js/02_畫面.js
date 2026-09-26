@@ -6,6 +6,89 @@
 const ui = { screen: 'setup', pending: null, cfg: null };
 const CFG_KEY = 'yuan2_dummy_cfg_v3';  // 預設組合改過數值就換版本號，舊設定才不會蓋掉新預設
 const $ = sel => document.querySelector(sel);
+
+// ================= 設定（存在瀏覽器；參考舊版：主角名字／暱稱、代表色、顯示說明，新增單一敵人自動選目標） =================
+const SETTINGS_KEY = 'yuan2_settings_v1';
+const settings = { playerName: '', battleNick: '', heroColor: '#ebcb8b', showDesc: true, autoTarget: true };
+function loadSettings() { try { const x = JSON.parse(localStorage.getItem(SETTINGS_KEY)); if (x && typeof x === 'object') Object.assign(settings, x); } catch (e) { /* 讀不到就用預設 */ } }
+function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* 存不了就算了 */ } }
+// 戰鬥中顯示的主角名：暱稱（2 字內）→ 名字前 2 字 → 主角
+function heroDisplayName() {
+  const nick = String(settings.battleNick).trim();
+  if (nick) return nick.slice(0, 2);
+  const full = String(settings.playerName).trim();
+  return full ? full.slice(0, 2) : '主角';
+}
+function applySettings() {
+  const h = HERO_DATA[0];
+  h.name = heroDisplayName();
+  h.color = settings.heroColor;
+  document.body.classList.toggle('hide-desc', !settings.showDesc);
+  if (typeof B !== 'undefined' && B.units) {
+    const u = B.units.find(x => x.id === 'hero');
+    if (u) { u.name = h.name; u.color = h.color; }
+  }
+}
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const to = x => Math.round(x * 255).toString(16).padStart(2, '0');
+  return '#' + to(f(0)) + to(f(8)) + to(f(4));
+}
+function hexToHsl(hex) {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex); if (!m) return { h: 45, s: 70, l: 70 };
+  const n = parseInt(m[1], 16); const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; const l = (mx + mn) / 2;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  if (d !== 0) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+// ☰ 選單與設定視窗（畫在 #menuLayer，不會被戰鬥畫面重畫洗掉）
+function openMenu() { ui.menu = 'menu'; renderMenu(); }
+function openSettings() { ui.menu = 'settings'; renderMenu(); }
+function closeMenu() { ui.menu = null; renderMenu(); }
+function menuToSetup() { closeMenu(); backToSetup(); }
+function toggleSetting(key) { settings[key] = !settings[key]; saveSettings(); applySettings(); renderMenu(); if (ui.screen === 'battle') render(); }
+function renderMenu() {
+  const layer = $('#menuLayer');
+  if (!ui.menu) { layer.innerHTML = ''; return; }
+  const sw = on => `<span class="switch ${on ? 'on' : ''}">${on ? '開' : '關'}</span>`;
+  let body = '';
+  if (ui.menu === 'menu') {
+    body = `<button class="menu-item" onclick="menuToSetup()">木樁設定</button>
+      <button class="menu-item" onclick="openSettings()">設定</button>
+      <button class="btn small ghost" onclick="closeMenu()">關閉</button>`;
+  } else if (ui.menu === 'settings') {
+    body = `<h3>設定</h3>
+      <div class="set-row nav" onclick="ui.menu='name';renderMenu()"><label>更改主角名字／暱稱</label><span class="nav-arrow">›</span></div>
+      <div class="set-row nav" onclick="ui.menu='color';renderMenu()"><label>更改主角代表色</label><span class="nav-arrow" style="color:${settings.heroColor}">●</span></div>
+      <div class="set-row" onclick="toggleSetting('showDesc')"><label>顯示技能說明</label>${sw(settings.showDesc)}</div>
+      <div class="set-row" onclick="toggleSetting('autoTarget')"><label>只剩一隻敵人時，單體技能不用點目標</label>${sw(settings.autoTarget)}</div>
+      <button class="btn small ghost" onclick="closeMenu()">關閉</button>`;
+  } else if (ui.menu === 'name') {
+    const q = v => esc(String(v));
+    body = `<h3>主角名字</h3>
+      <div class="set-row"><label>主角名字</label><input type="text" maxlength="8" value="${q(settings.playerName)}" placeholder="主角" oninput="settings.playerName=this.value;saveSettings();applySettings();if(ui.screen==='battle')render()"></div>
+      <div class="set-row"><label>戰鬥暱稱（2 字內）</label><input type="text" maxlength="2" value="${q(settings.battleNick)}" placeholder="${q(heroDisplayName())}" oninput="settings.battleNick=this.value;saveSettings();applySettings();if(ui.screen==='battle')render()"></div>
+      <p class="hint">「主角名字」＝之後劇情裡大家叫你的名字；「戰鬥暱稱」＝戰鬥畫面顯示用（最多 2 字）。暱稱留空就自動取名字前 2 個字。</p>
+      <button class="btn small ghost" onclick="ui.menu='settings';renderMenu()">← 返回</button>`;
+  } else if (ui.menu === 'color') {
+    const c = hexToHsl(settings.heroColor);
+    body = `<h3>主角代表色</h3>
+      <div class="set-row"><label>預覽</label><span id="colorPrev" class="color-prev" style="background:${settings.heroColor}"></span></div>
+      <label class="slabel">色相</label><input type="range" id="setHue" class="hue" min="0" max="360" value="${c.h}" oninput="upColor()">
+      <label class="slabel">濃淡</label><input type="range" id="setSat" min="0" max="100" value="${c.s}" oninput="upColor()">
+      <label class="slabel">明暗</label><input type="range" id="setLit" min="20" max="80" value="${c.l}" oninput="upColor()">
+      <button class="btn small ghost" onclick="ui.menu='settings';renderMenu()">← 返回</button>`;
+  }
+  layer.innerHTML = `<div class="modal" onclick="if(event.target===this)closeMenu()"><div class="modal-box menu-box">${body}</div></div>`;
+}
+function upColor() {
+  settings.heroColor = hslToHex(+$('#setHue').value, +$('#setSat').value, +$('#setLit').value);
+  $('#colorPrev').style.background = settings.heroColor;
+  saveSettings(); applySettings(); if (ui.screen === 'battle') render();
+}
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 // ================= 木樁設定面板 =================
@@ -57,6 +140,7 @@ function renderSetup() {
         <div class="slider-row med-row"><span>醫療物</span><input type="range" min="0" max="8" step="1" value="${c.med}" oninput="setMed(this.value)"><b id="medv">${c.med}</b></div>
         <p class="hint">群攻每人吃「攻擊 ×0.7」，前排只剩一人時再 ×1.7。換位：隨機挑一人換到另一排（不會把最後一個前排推走）。推順序：隨機挑一人，下一次行動往後一格。</p>
       </div>
+      <p class="center"><button class="btn small ghost" onclick="openSettings()">⚙ 設定</button></p>
       <button class="btn primary big" onclick="beginBattle()" ${c.slots.some(s => s.on) ? '' : 'disabled'}>開戰</button>
       <p class="archive-link"><a href="封存/淵2戰鬥原型_v0.2.60/">舊版戰鬥原型（封存）</a></p>
     </div>`;
@@ -157,7 +241,11 @@ function clickSkill(id) {
   if (!myTurn()) return;
   const u = B.cur, s = SKILLS[id];
   if (!s || !skillUsable(u, id)) return;
-  if (s.target === 'enemy') { ui.pending = { type: 'target', id, extra: null }; render(); return; }
+  if (s.target === 'enemy') {
+    const es = aliveEnemies();
+    if (settings.autoTarget && es.length === 1) { useSkill(u, id, es[0], null); endPlayerTurn(); return; }
+    ui.pending = { type: 'target', id, extra: null }; render(); return;
+  }
   useSkill(u, id, null, null);
   endPlayerTurn();
 }
@@ -315,12 +403,12 @@ function render() {
   $('#app').innerHTML = `
     <div class="battle">
       <div class="topbar"><span class="round">第 ${B.round} 輪${enr}</span><span class="globs">${glob}</span>
-        <button class="btn small ghost" onclick="backToSetup()">設定</button></div>
+        <button class="btn small ghost" onclick="openMenu()">☰</button></div>
       <div class="order">${renderOrder()}</div>
       <div class="enemy-row n${enemies().length}">${renderEnemies()}</div>
       <div class="party">
-        <div class="prow"><div class="plabel">前排</div>${renderPartyRow('front')}</div>
-        <div class="prow"><div class="plabel">後排</div>${renderPartyRow('back')}</div>
+        <div class="prow"><div class="plabel">前排</div><div class="pcards">${renderPartyRow('front')}</div></div>
+        <div class="prow"><div class="plabel">後排</div><div class="pcards">${renderPartyRow('back')}</div></div>
       </div>
       <div class="actions">${renderActions()}</div>
       <div class="log">${logs}</div>

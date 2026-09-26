@@ -163,7 +163,7 @@ function exhaustRecover(u) {
   const before = u.hp;
   if (u.id === 'hero') {
     u.hp = Math.min(u.maxHp, u.hp + pctOf(u, u.exFirst ? EXHAUST_FIRST : EXHAUST_LATER));
-    log(`主角${u.exFirst ? '振作' : '硬撐'}起來：血量 +${u.hp - before}。`, 'heal');
+    log(`${u.name}${u.exFirst ? '振作' : '硬撐'}起來：血量 +${u.hp - before}。`, 'heal');
     fx(u.id, (u.exFirst ? '振作 +' : '硬撐 +') + (u.hp - before), 'heal');
   } else {
     const target = pctOf(u, u.exFirst ? EXHAUST_FIRST : EXHAUST_LATER);
@@ -231,7 +231,7 @@ const SKILLS = {
   // 主角
   slash: { name: '劈斬', desc: '單傷' + dr('slash'), target: 'enemy', run(u, t) { hit(u, t, 'slash'); } },
   taunt: { name: '嘲諷', desc: '嘲諷全體敵人（單攻都打他），到他下個回合', target: 'none',
-    run(u) { addGlob('taunt', u.id, 1); log('嘲諷：單攻都會打主角（到他下個回合）。', 'good'); } },
+    run(u) { addGlob('taunt', u.id, 1); log(`嘲諷：單攻都會打${u.name}（到他下個回合）。`, 'good'); } },
   // 突襲：不花移動點、只衝空位；出招時人在後排就能用（納可 2026-09-26：可以先用移動點退後再突襲，
   //       代價是移動點用掉、隊友沒法跟他對調；而且主角打帶跑會讓別人去坦，這是想鼓勵的）
   charge_in: { name: '突襲', desc: '衝進前排空位單傷，打完留在前排；不花移動點' + dr('charge_in'),
@@ -252,7 +252,7 @@ const SKILLS = {
       });
     } },
   hold: { name: '不退', desc: '背水：到他下個回合，所有攻擊都衝著他來，每被打一次就反擊；第一擊致命傷留 1 血（反擊 ' + SKILL_DMG.hold_counter.join('~') + '）', target: 'none', bw: true,
-    run(u) { addGlob('taunt', u.id, 1, { counter: true, lock: true }); log('主角：「想過去？先過我這關！」（佔位）', 'good'); } },
+    run(u) { addGlob('taunt', u.id, 1, { counter: true, lock: true }); log(`${u.name}：「想過去？先過我這關！」（佔位）`, 'good'); } },
   // V
   guard: { name: '格擋', desc: '下一次受到的傷害減 50%', target: 'none',
     run(u) { u.guard = true; log('格擋：V 下一次受傷減半。'); } },
@@ -413,7 +413,7 @@ function attackPlayer(e, p, base, mul) {
   damagePlayer(p, d, e);
   const tg = getGlob('taunt');
   if (tg && tg.counter && tg.owner === p.id && !p.ko && !e.ko) {
-    log('不退：主角反擊！', 'good');
+    log(`不退：${p.name} 反擊！`, 'good');
     hit(p, e, 'hold_counter');
   }
 }

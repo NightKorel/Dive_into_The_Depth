@@ -7,8 +7,10 @@
             次號、主號等納可開口（規則見 CLAUDE.md）。
    ======================================================== */
 
-const VERSION = 'v0.0.19';
+const VERSION = 'v0.0.20';
 
 document.getElementById('version').textContent = VERSION;
+loadSettings();
+applySettings();
 ui.cfg = loadCfg();
 renderSetup();
