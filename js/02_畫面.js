@@ -301,7 +301,7 @@ function badges(u) {
   if (u.ko) return badge('ko', '昏迷', '血量歸零，這場不能再行動。');
   if (isND(u)) b.push(badge('nd', `瀕死${u.bwUsed ? '·背水已用' : ''}`, '血量低於 20%。站前排時，前排兩招會變成背水（每次瀕死只能用一次）；在後排進入瀕死、或瀕死時退到後排會脫力。'));
   if (u.evade) b.push(badge('heal', '閃避待命', '靈巧：到他下次輪到前，第一次被打一定閃掉。'));
-  if (u.mustRetreat) b.push(badge('warn', '背水後要撤退', '用過背水，下次輪到他時必須先撤到後排（或跟後排的人對調）。瀕死撤退會脫力。'));
+  if (u.mustRetreat) b.push(badge('warn', '背水後要後撤', '用過背水，下次輪到他時必須先後撤到後排（或跟後排的人對調）。瀕死後撤會脫力。'));
   if (u.exState) b.push(badge('ex', u.id === 'hero' ? (u.exFirst ? '振作中' : '硬撐中') : '脫力', exhaustTip(u)));
   if (u.guard) b.push(badge('', '格擋', '下一次受到的傷害減 50%。'));
   if (u.ambush) b.push(badge('', '偷襲待命', '到他下次回合前，第一個攻擊的敵人出手前會先被捅一刀。'));
@@ -367,8 +367,8 @@ function renderActions() {
   let html = `<div class="act-head"><b style="color:${u.color}">${esc(u.name)}</b><span class="dim">・${side === 'front' ? '前排' : '後排'}</span><span class="trait">${esc(u.data.trait)}</span></div>`;
   if (u.mustRetreat) {
     const o = forcedRetreatOptions(u);
-    html += `<div class="prompt">背水之後撐不住了，必須撤退！${isND(u) ? '（瀕死撤到後排會脫力）' : ''}</div><div class="btn-row">`;
-    if (o.flip) html += `<button class="btn" onclick="clickForced(null)">撤到後排空位</button>`;
+    html += `<div class="prompt">用過背水，必須後撤！${isND(u) ? '（瀕死後撤到後排會脫力）' : ''}</div><div class="btn-row">`;
+    if (o.flip) html += `<button class="btn" onclick="clickForced(null)">後撤到空位</button>`;
     o.swaps.forEach(id => { html += `<button class="btn" onclick="clickForced('${id}')">跟 ${esc(uById(id).name)} 對調</button>`; });
     return html + '</div>';
   }

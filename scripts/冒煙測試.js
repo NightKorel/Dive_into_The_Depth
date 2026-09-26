@@ -42,9 +42,9 @@ for (let n = 0; n < N; n++) {
       if (u.mustRetreat) {
         const o = G.forcedRetreatOptions(u);
         const opts = (o.flip ? [{}] : []).concat(o.swaps.map(id => ({ swap: id })));
-        if (!opts.length) throw new Error('必須撤退卻沒有選項');
+        if (!opts.length) throw new Error('必須後撤卻沒有選項');
         ended = G.doForcedRetreat(u, pick(opts));
-        if (u.mustRetreat) throw new Error('撤退失敗');
+        if (u.mustRetreat) throw new Error('後撤失敗');
       }
       if (!ended && Math.random() < 0.4) {
         const opts = [];

@@ -345,7 +345,7 @@ function useSkill(u, id, target, extra) {
   if (!s || !skillUsable(u, id)) return false;
   log(`${u.name}：${s.name}`, s.bw ? 'bw' : 'act');
   s.run(u, target, extra);
-  if (s.bw) { u.bwUsed = true; u.mustRetreat = true; }   // 用過背水，下次輪到必須撤退
+  if (s.bw) { u.bwUsed = true; u.mustRetreat = true; }   // 用過背水，下次輪到必須後撤
   return true;
 }
 function useMed(u, kind, t) {
@@ -450,7 +450,7 @@ function collapseLine() {
   });
   syncRows();
 }
-// 背水後必須撤退：移到後排空位（前排還有別人時），或跟後排一個沒在脫力的人對調（強制，不看對方移動點，但會用掉）
+// 背水後必須後撤：移到後排空位（前排還有別人時），或跟後排一個沒在脫力的人對調（強制，不看對方移動點，但會用掉）
 function forcedRetreatOptions(u) {
   return {
     flip: frontAlive().length > 1,
@@ -463,10 +463,10 @@ function doForcedRetreat(u, opt) {
   if (opt.swap) {
     if (!o.swaps.includes(opt.swap)) return false;
     const p = uById(opt.swap); p.row = 'front'; p.movePt = false;
-    log(`${u.name} 撤退，${p.name} 頂上。`, 'act');
+    log(`${u.name} 後撤，${p.name} 頂上。`, 'act');
   } else {
     if (!o.flip) return false;
-    log(`${u.name} 撤到後排。`, 'act');
+    log(`${u.name} 後撤到後排。`, 'act');
   }
   u.row = 'back'; u.movePt = false; u.mustRetreat = false;
   if (isND(u)) { exhaust(u, true); return true; }
