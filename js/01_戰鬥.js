@@ -293,12 +293,15 @@ const SKILLS = {
   icespike: { name: '冰刺', desc: '單傷，全隊最高' + dr('icespike'), target: 'enemy', run(u, t) { hit(u, t, 'icespike'); } },
   freeze: { name: '凍結', desc: '一隻敵人的下一次行動往後推一格', target: 'enemy',
     run(u, t) { pushBack(t.id); log(`凍結：${t.name} 的下一次行動往後一格。`); fx(t.id, '往後一格', 'miss'); } },
-  bloodfrost: { name: '血霜花', desc: '背水：群傷，每隻 50% 被凍住（跳過下一次行動）（每隻 ' + SKILL_DMG.bloodfrost.join('~') + '）', target: 'none', bw: true,
+  bloodfrost: { name: '血霜花', desc: '背水：群傷，每隻 50% 被凍住（跳過下一次行動）；血魔法，用完扣自己 10% 血（最低剩 1）（每隻 ' + SKILL_DMG.bloodfrost.join('~') + '）', target: 'none', bw: true,
     run(u) {
       aliveEnemies().forEach(e => {
         const r = hit(u, e, 'bloodfrost');
         if (r && !r.kill && rnd() < 0.5) { e.skipNext = true; log(`${e.name} 被凍住（空過下一次行動）。`, 'good'); fx(e.id, '凍住', 'miss'); }
       });
+      // 血魔法的代價：扣自己血量上限 10%，最低剩 1（不會把自己打昏）
+      const cost = Math.min(pctOf(u, BLOODFROST_COST), Math.max(0, u.hp - 1));
+      if (cost > 0) { u.hp -= cost; fx(u.id, '-' + cost, 'dmg'); log(`血魔法：${u.name} 失去 ${cost} 血。`, 'bad'); }
     } },
 };
 
