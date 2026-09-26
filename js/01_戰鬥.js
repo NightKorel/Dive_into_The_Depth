@@ -201,7 +201,8 @@ function damagePlayer(p, d, src) {
 }
 
 // ---- 我方打敵人 ----
-// 爆擊：①計數：每打第 N 下必爆（一般 5、L 3），爆了就重新計數；②這招自己的爆擊率（opt.crit，如飛刀、刀舞）＋順風，是額外的機率；③蓄力必爆。
+// 爆擊：①計數：每出第 N 招攻擊必爆（一般 5、L 3；這招每一下都爆），爆了就重新計數（在 useSkill 裡算）；
+//       ②這招自己的爆擊率（opt.crit，如飛刀、刀舞）＋順風，是額外的機率；③蓄力必爆。
 function hit(u, e, base, opt) {
   if (!e || e.ko) return null;
   opt = opt || {};
@@ -210,9 +211,9 @@ function hit(u, e, base, opt) {
   d *= dmgMul();
   let rate = opt.crit || 0;
   if (getGlob('tailwind')) rate += TAILWIND_CRIT;
-  u.critCount++;
-  const crit = B.forceCrit || u.critCount >= u.critEvery || (rate > 0 && rnd() < rate);
-  if (crit) u.critCount = 0;
+  const crit = B.forceCrit || B.counterCrit || (rate > 0 && rnd() < rate);
+  if (crit) B.anyCrit = true;
+  B.hitCount++;
   if (B.forceCrit) B.chargeUsed = true;
   if (crit) d *= CRIT_MUL;
   d = Math.floor(d);
@@ -284,7 +285,13 @@ const SKILLS = {
   k_bw: { name: 'K 背水', desc: '背水（名字待定）：大群傷（每隻 ' + SKILL_DMG.k_bw.join('~') + '）', target: 'none', bw: true,
     run(u) { aliveEnemies().forEach(e => hit(u, e, 'k_bw')); } },
   // L
-  frostburst: { name: '霜爆', desc: '近身單傷' + dr('frostburst'), target: 'enemy', run(u, t) { hit(u, t, 'frostburst'); } },
+  frostburst: { name: '霜觸', desc: '近身單傷' + dr('frostburst'), target: 'enemy', run(u, t) { hit(u, t, 'frostburst'); } },
+  hail: { name: '冰雹', desc: '擲 4d3 決定顆數（4~12 顆），每顆隨機打一隻敵人（每顆 ' + SKILL_DMG.hail.join('~') + '）', target: 'none',
+    run(u) {
+      const n = randInt(1, 3) + randInt(1, 3) + randInt(1, 3) + randInt(1, 3);
+      log(`冰雹：${n} 顆！`, 'act');
+      for (let i = 0; i < n; i++) { const es = aliveEnemies(); if (!es.length) break; hit(u, pick(es), 'hail'); }
+    } },
   icespike: { name: '冰刺', desc: '單傷，全隊最高' + dr('icespike'), target: 'enemy', run(u, t) { hit(u, t, 'icespike'); } },
   freeze: { name: '凍結', desc: '一隻敵人的下一次行動往後推一格', target: 'enemy',
     run(u, t) { pushBack(t.id); log(`凍結：${t.name} 的下一次行動往後一格。`); fx(t.id, '往後一格', 'miss'); } },
@@ -341,10 +348,16 @@ function useSkill(u, id, target, extra) {
   // 蓄力：這一招裡的每一下都必定爆擊；有打到人才算用掉
   B.forceCrit = !!u.charged;
   B.chargeUsed = false;
+  // 爆擊計數：這招算一次；湊滿就這招每一下都爆。沒打到人的招（格擋、嘲諷…）不算
+  u.critCount++;
+  B.counterCrit = u.critCount >= u.critEvery;
+  B.hitCount = 0; B.anyCrit = false;
   log(`${u.name}：${s.name}`, s.bw ? 'bw' : 'act');
   s.run(u, target, extra);
   if (B.chargeUsed) u.charged = false;
-  B.forceCrit = false;
+  if (!B.hitCount) u.critCount--;
+  else if (B.anyCrit) u.critCount = 0;
+  B.forceCrit = false; B.counterCrit = false;
   if (s.bw) { u.bwUsed = true; u.mustRetreat = true; }   // 用過背水，下次輪到必須撤退
   return true;
 }

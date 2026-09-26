@@ -256,7 +256,7 @@ function renderPartyRow(row) {
     const bd = badges(p);
     return `<div class="card ally ${p.ko ? 'dead' : ''} ${B.cur === p ? 'acting' : ''} ${pickable ? 'targetable' : ''}"
       data-id="${p.id}" style="--c:${p.color}" onclick="clickAlly('${p.id}')">
-      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${p.ko ? '' : `<span class="mv ${p.movePt ? '' : 'used'}" title="${p.movePt ? '還有移動點' : '移動點用掉了'}">🔁</span>`}</span><span class="hpnum">${p.ko ? '' : `<span class="cc ${p.critCount >= p.critEvery - 1 ? 'ready' : ''}" title="爆擊計數：每打第 ${p.critEvery} 下必定爆擊">爆${p.critCount}/${p.critEvery}</span>`}${p.hp}/${p.maxHp}</span></div>
+      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${p.ko ? '' : `<span class="mv ${p.movePt ? '' : 'used'}" title="${p.movePt ? '還有移動點' : '移動點用掉了'}">🔁</span>`}</span><span class="hpnum">${p.ko ? '' : `<span class="cc ${p.critCount >= p.critEvery - 1 ? 'ready' : ''}" title="爆擊計數：每出第 ${p.critEvery} 招攻擊必定爆擊">爆${p.critCount}/${p.critEvery}</span>`}${p.hp}/${p.maxHp}</span></div>
       ${hpBar(p)}${bd ? `<div class="badges">${bd}</div>` : ''}
     </div>`;
   }).join('');

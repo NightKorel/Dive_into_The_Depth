@@ -7,7 +7,7 @@
 // ---- 規則常數 ----
 const DEATH_LINE = 0.2;        // 瀕死線：血量低於 20%（剛好 20% 不算）
 const CRIT_MUL = 2;            // 爆擊倍率
-const CRIT_EVERY = 5;          // 爆擊計數：每打第 5 下必定爆擊（L 精確是每 3 下；見 HERO_DATA.critEvery）
+const CRIT_EVERY = 5;          // 爆擊計數：每出第 5 招攻擊必定爆擊（這招每一下都爆；L 精確是每 3 招；見 HERO_DATA.critEvery）
 const GROUP_SOLO_MUL = 1.7;    // 前排只剩一人時，群攻 ×1.7
 const GROUP_RATIO = 0.7;       // 木樁群攻：每人吃「攻擊傷害 ×0.7」（暫定）
 const ENEMY_SWING = 0.1;       // 敵人傷害小幅波動 ±10%（暫定）
@@ -36,7 +36,8 @@ const SKILL_DMG = {
   double: [9, 10],       // K 雙擊（每下）：客場招要誘人，兩下打得贏風刃打一隻
   windblade: [7, 8],     // K 風刃（每隻）
   k_bw: [16, 19],        // K 背水（每隻）
-  frostburst: [24, 28],  // L 霜爆：客場招要誘人，比冰刺強（近身用魔法危險但威力最大）
+  frostburst: [24, 28],  // L 霜觸：客場招要誘人，比冰刺強（近身用魔法危險但威力最大）
+  hail: [4, 5],          // L 冰雹：每一顆（顆數擲 4d3）
   icespike: [20, 23],    // L 冰刺
   bloodfrost: [8, 9],    // L 血霜花（每隻）
 };
@@ -54,8 +55,8 @@ const HERO_DATA = [
     front: ['double', 'dust'], back: ['windblade', 'tailwind'], bw: 'k_bw',
     trait: '治癒：用醫療物時，目標當下多回 10%' },
   { id: 'l', name: 'L', color: '#88c0d0', maxHp: 80, spd: 9, critEvery: 3, row: 'back',
-    front: ['frostburst', null], back: ['icespike', 'freeze'], emptyName: { front: 'L 前排 2' }, bw: 'bloodfrost',
-    trait: '精確：每打第 3 下必定爆擊（別人是第 5 下）' },
+    front: ['frostburst', 'hail'], back: ['icespike', 'freeze'], bw: 'bloodfrost',
+    trait: '精確：每出第 3 招攻擊必定爆擊（別人是第 5 招）' },
 ];
 
 // ---- 木樁 ----
