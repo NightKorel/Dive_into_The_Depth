@@ -7,7 +7,7 @@
 // ---- 規則常數 ----
 const DEATH_LINE = 0.2;        // 瀕死線：血量低於 20%（剛好 20% 不算）
 const CRIT_MUL = 2;            // 爆擊倍率
-const CRIT_EVERY = 5;          // 爆擊計數：每出第 5 招攻擊必定爆擊（這招每一下都爆；L 精確是每 3 招；見 HERO_DATA.critEvery）
+const BASE_CRIT = 0.1;         // 天生爆擊率 10%（L 精確 20%；見 HERO_DATA.crit）。技能自帶爆擊率時取較高的那個，再加順風
 const GROUP_SOLO_MUL = 1.7;    // 前排只剩一人時，群攻 ×1.7
 const GROUP_RATIO = 0.7;       // 木樁群攻：每人吃「攻擊傷害 ×0.7」（暫定）
 const ENEMY_SWING = 0.1;       // 敵人傷害小幅波動 ±10%（暫定）
@@ -31,7 +31,8 @@ const SKILL_DMG = {
   hold_counter: [8, 9],  // 主角 不退的反擊
   hero_b2: [3, 4],       // 主角 干擾：全體超小傷害（每隻）
   rend: [14, 16],        // V 割裂
-  knives: [5, 6],        // V 飛刀（每把）
+  knives: [6, 8],        // V 飛刀（每把，不帶爆擊率）
+  ambush: [14, 16],      // V 偷襲（爆擊率 50%）
   bladedance: [16, 19],  // V 刀舞
   double: [9, 10],       // K 雙擊（每下）：客場招要誘人，兩下打得贏風刃打一隻
   windblade: [7, 8],     // K 風刃（每隻）
@@ -45,18 +46,18 @@ const SKILL_DMG = {
 // ---- 角色（血量以 100 為基準、10 的倍數；速度暫定） ----
 // front / back：前排兩招、後排兩招的技能 id；null＝這格還沒定
 const HERO_DATA = [
-  { id: 'hero', name: '主角', color: '#ebcb8b', maxHp: 120, spd: 10, critEvery: CRIT_EVERY, row: 'front',
+  { id: 'hero', name: '主角', color: '#ebcb8b', maxHp: 120, spd: 10, crit: BASE_CRIT, row: 'front',
     front: ['slash', 'taunt'], back: ['charge_in', 'hero_b2'], bw: 'hold',
     trait: '振作／硬撐：脫力時血量「加上」40%／20%' },
-  { id: 'v', name: 'V', color: '#b48ead', maxHp: 90, spd: 14, critEvery: CRIT_EVERY, row: 'front',
-    front: ['guard', 'rend'], back: ['knives', 'focus'], bw: 'bladedance',
+  { id: 'v', name: 'V', color: '#b48ead', maxHp: 90, spd: 14, crit: BASE_CRIT, row: 'front',
+    front: ['guard', 'rend'], back: ['knives', 'ambush'], bw: 'bladedance',
     trait: '靈巧：進前排後，到他下次輪到前，第一次被打一定閃掉' },
-  { id: 'k', name: 'K', color: '#a3be8c', maxHp: 100, spd: 12, critEvery: CRIT_EVERY, row: 'back',
+  { id: 'k', name: 'K', color: '#a3be8c', maxHp: 100, spd: 12, crit: BASE_CRIT, row: 'back',
     front: ['double', 'dust'], back: ['windblade', 'tailwind'], bw: 'k_bw',
     trait: '治癒：用醫療物時，目標當下多回 10%' },
-  { id: 'l', name: 'L', color: '#88c0d0', maxHp: 80, spd: 9, critEvery: 3, row: 'back',
+  { id: 'l', name: 'L', color: '#88c0d0', maxHp: 80, spd: 9, crit: 0.2, row: 'back',
     front: ['frostburst', 'hail'], back: ['icespike', 'freeze'], bw: 'bloodfrost',
-    trait: '精確：每出第 3 招攻擊必定爆擊（別人是第 5 招）' },
+    trait: '精確：天生爆擊率 20%（別人 10%）' },
 ];
 
 // ---- 木樁 ----

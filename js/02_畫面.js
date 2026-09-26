@@ -207,7 +207,7 @@ function badges(u) {
   if (u.mustRetreat) b.push('<span class="badge warn">背水後要撤退</span>');
   if (u.exState) b.push(`<span class="badge ex">${u.id === 'hero' ? (u.exFirst ? '振作中' : '硬撐中') : '脫力'}</span>`);
   if (u.guard) b.push('<span class="badge">格擋</span>');
-  if (u.charged) b.push('<span class="badge">蓄力</span>');
+  if (u.ambush) b.push('<span class="badge">偷襲待命</span>');
   if (u.hots.length) b.push(`<span class="badge heal">回春${u.hots.reduce((a, h) => a + h.left, 0)}</span>`);
   const tg = getGlob('taunt');
   if (tg && tg.owner === u.id) b.push(`<span class="badge bw">${tg.counter ? '不退' : '嘲諷'}</span>`);
@@ -246,7 +246,7 @@ function renderPartyRow(row) {
     const bd = badges(p);
     return `<div class="card ally ${p.ko ? 'dead' : ''} ${B.cur === p ? 'acting' : ''} ${pickable ? 'targetable' : ''}"
       data-id="${p.id}" style="--c:${p.color}" onclick="clickAlly('${p.id}')">
-      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${p.ko ? '' : `<span class="mv ${p.movePt ? '' : 'used'}" title="${p.movePt ? '還有移動點' : '移動點用掉了'}">🔁</span>`}</span><span class="hpnum">${p.ko ? '' : `<span class="cc ${p.critCount >= p.critEvery - 1 ? 'ready' : ''}" title="爆擊計數：每出第 ${p.critEvery} 招攻擊必定爆擊">爆${p.critCount}/${p.critEvery}</span>`}${p.hp}/${p.maxHp}</span></div>
+      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${p.ko ? '' : `<span class="mv ${p.movePt ? '' : 'used'}" title="${p.movePt ? '還有移動點' : '移動點用掉了'}">🔁</span>`}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
       ${hpBar(p)}${bd ? `<div class="badges">${bd}</div>` : ''}
     </div>`;
   }).join('');

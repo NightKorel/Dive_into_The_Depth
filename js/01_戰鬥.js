@@ -14,7 +14,6 @@
 const B = {
   units: [], cycle: [], ptr: -1, round: 1, cur: null,
   med: 0, log: [], events: [], glob: [], over: null, waiting: null, cfg: null,
-  forceCrit: false,
 };
 
 // ---- 小工具 ----
@@ -46,8 +45,8 @@ function setupBattle(cfg) {
   HERO_DATA.forEach(h => {
     B.units.push({
       id: h.id, side: 'p', name: h.name, color: h.color, data: h,
-      maxHp: h.maxHp, hp: h.maxHp, spd: h.spd, critEvery: h.critEvery, critCount: 0, evade: false, prevRow: h.row, row: h.row,
-      ko: false, skipNext: false, mustRetreat: false, exState: null, exFirst: false, bwUsed: false, exCount: 0, guard: false, charged: false,
+      maxHp: h.maxHp, hp: h.maxHp, spd: h.spd, crit: h.crit, ambush: false, evade: false, prevRow: h.row, row: h.row,
+      ko: false, skipNext: false, mustRetreat: false, exState: null, exFirst: false, bwUsed: false, exCount: 0, guard: false,
       hots: [], movePt: true, startBack: false,   // movePt：移動點，每次輪到自己時刷新
     });
   });
@@ -63,7 +62,7 @@ function setupBattle(cfg) {
   B.cycle = init.map(x => x.id);
   B.ptr = -1; B.round = 1; B.cur = null;
   B.med = cfg.med; B.log = []; B.events = []; B.glob = [];
-  B.over = null; B.waiting = null; B.forceCrit = false;
+  B.over = null; B.waiting = null;
   log('— 戰鬥開始（第 1 輪）—', 'sys');
 }
 
@@ -125,6 +124,7 @@ function startTurn(u) {
   if (u.side === 'e') return 'enemy';
   u.movePt = true;
   u.evade = false;
+  if (u.ambush) { u.ambush = false; log(`${u.name} 的偷襲落空了。`, 'dim'); }
   u.startBack = u.row === 'back';
   if (u.mustRetreat) {
     const o = forcedRetreatOptions(u);
@@ -175,7 +175,7 @@ function exhaustRecover(u) {
   if (!isND(u)) u.bwUsed = false;
 }
 function knockOut(p) {
-  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.charged = false; p.skipNext = false; p.exState = null; p.mustRetreat = false; p.evade = false;
+  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.ambush = false; p.skipNext = false; p.exState = null; p.mustRetreat = false; p.evade = false;
   removeFromCycle(p.id);
   B.glob = B.glob.filter(g => g.owner !== p.id);
   log(`${p.name} 昏迷了！`, 'bad');
@@ -201,20 +201,16 @@ function damagePlayer(p, d, src) {
 }
 
 // ---- 我方打敵人 ----
-// 爆擊：①計數：每出第 N 招攻擊必爆（一般 5、L 3；這招每一下都爆），爆了就重新計數（在 useSkill 裡算）；
-//       ②這招自己的爆擊率（opt.crit，如飛刀、刀舞）＋順風，是額外的機率；③蓄力必爆。
+// 爆擊：天生爆擊率（10%，L 20%）；技能自帶爆擊率（opt.crit，如割裂、偷襲、刀舞）時取較高的，再加順風 +20%。
 function hit(u, e, base, opt) {
   if (!e || e.ko) return null;
   opt = opt || {};
   // base 可以是技能 id（查 SKILL_DMG 範圍、隨機取整數）或直接給數字
   let d = typeof base === 'string' ? randInt(SKILL_DMG[base][0], SKILL_DMG[base][1]) : base;
   d *= dmgMul();
-  let rate = opt.crit || 0;
+  let rate = Math.max(opt.crit || 0, u.crit || 0);
   if (getGlob('tailwind')) rate += TAILWIND_CRIT;
-  const crit = B.forceCrit || B.counterCrit || (rate > 0 && rnd() < rate);
-  if (crit) B.anyCrit = true;
-  B.hitCount++;
-  if (B.forceCrit) B.chargeUsed = true;
+  const crit = rnd() < rate;
   if (crit) d *= CRIT_MUL;
   d = Math.floor(d);
   e.hp = Math.max(0, e.hp - d);
@@ -260,11 +256,12 @@ const SKILLS = {
   // V
   guard: { name: '格擋', desc: '下一次受到的傷害減 50%', target: 'none',
     run(u) { u.guard = true; log('格擋：V 下一次受傷減半。'); } },
-  rend: { name: '割裂', desc: '單傷' + dr('rend'), target: 'enemy', run(u, t) { hit(u, t, 'rend'); } },
-  knives: { name: '飛刀', desc: '擲三把，隨機打敵人，爆擊率 30%（每把 ' + SKILL_DMG.knives.join('~') + '）', target: 'none',
-    run(u) { for (let i = 0; i < 3; i++) { const es = aliveEnemies(); if (!es.length) break; hit(u, pick(es), 'knives', { crit: 0.3 }); } } },
-  focus: { name: '蓄力', desc: '下一次攻擊必定爆擊（飛刀三把都算）', target: 'none',
-    run(u) { u.charged = true; log('蓄力：V 下一招必定爆擊。'); } },
+  rend: { name: '割裂', desc: '單傷，爆擊率 30%' + dr('rend'), target: 'enemy', run(u, t) { hit(u, t, 'rend', { crit: 0.3 }); } },
+  knives: { name: '飛刀', desc: '擲三把，隨機打敵人（每把 ' + SKILL_DMG.knives.join('~') + '）', target: 'none',
+    run(u) { for (let i = 0; i < 3; i++) { const es = aliveEnemies(); if (!es.length) break; hit(u, pick(es), 'knives'); } } },
+  // 偷襲（取代蓄力）：從現在到 V 下次回合開始，第一個「攻擊」的敵人出手前先被捅一刀（打死就打不出來）
+  ambush: { name: '偷襲', desc: '到他下次回合前，第一個攻擊的敵人出手前先被捅，爆擊率 50%；沒敵人攻擊就落空' + dr('ambush'), target: 'none',
+    run(u) { u.ambush = true; log('偷襲：V 躲進陰影等著。'); } },
   bladedance: { name: '刀舞', desc: '背水：單傷、爆擊率 50%，擊殺就再攻擊一次（隨機目標），可以一直連下去' + dr('bladedance'), target: 'enemy', bw: true,
     run(u, t) {
       let target = t, n = 0;
@@ -346,19 +343,8 @@ function doMove(u, opt) {
 function useSkill(u, id, target, extra) {
   const s = SKILLS[id];
   if (!s || !skillUsable(u, id)) return false;
-  // 蓄力：這一招裡的每一下都必定爆擊；有打到人才算用掉
-  B.forceCrit = !!u.charged;
-  B.chargeUsed = false;
-  // 爆擊計數：這招算一次；湊滿就這招每一下都爆。沒打到人的招（格擋、嘲諷…）不算
-  u.critCount++;
-  B.counterCrit = u.critCount >= u.critEvery;
-  B.hitCount = 0; B.anyCrit = false;
   log(`${u.name}：${s.name}`, s.bw ? 'bw' : 'act');
   s.run(u, target, extra);
-  if (B.chargeUsed) u.charged = false;
-  if (!B.hitCount) u.critCount--;
-  else if (B.anyCrit) u.critCount = 0;
-  B.forceCrit = false; B.counterCrit = false;
   if (s.bw) { u.bwUsed = true; u.mustRetreat = true; }   // 用過背水，下次輪到必須撤退
   return true;
 }
@@ -382,6 +368,11 @@ function enemyAct(e) {
   const act = e.pattern.length ? e.pattern[e.pi % e.pattern.length] : 'idle';
   e.pi++;
   if (act === 'idle') { log(`${e.name} 發呆。`, 'dim'); return; }
+  // V 的偷襲：攻擊類招式出手前先被捅
+  if ((act === 'single' || act === 'group')) {
+    const amb = alivePlayers().find(p => p.ambush);
+    if (amb) { amb.ambush = false; log(`偷襲！${amb.name} 從陰影捅向 ${e.name}。`, 'good'); hit(amb, e, 'ambush', { crit: 0.5 }); if (e.ko) return; }
+  }
   if (act === 'single') {
     let t = null;
     const tg = getGlob('taunt');
