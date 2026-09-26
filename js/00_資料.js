@@ -23,6 +23,22 @@ const TAILWIND_MUL = 1.3;      // 順風：全隊增傷 30%（暫定）
 const DUST_MISS = 0.2;         // 揚塵：敵人 20% 失手
 const DUMMY_SPD = 11;          // 木樁速度（暫定）
 
+// ---- 技能傷害（我方小浮動：每次在範圍內隨機取整數；之後強化就是把範圍往上推） ----
+const SKILL_DMG = {
+  slash: [12, 14],       // 主角 劈斬
+  charge_in: [18, 21],   // 主角 突襲
+  hold_counter: [8, 9],  // 主角 不退的反擊
+  rend: [14, 16],        // V 割裂
+  knives: [5, 6],        // V 飛刀（每把）
+  bladedance: [16, 19],  // V 刀舞
+  double: [6, 7],        // K 雙擊（每下）
+  windblade: [7, 8],     // K 風刃（每隻）
+  k_bw: [16, 19],        // K 背水（每隻）
+  frostburst: [16, 19],  // L 霜爆
+  icespike: [20, 23],    // L 冰刺
+  bloodfrost: [8, 9],    // L 血霜花（每隻）
+};
+
 // ---- 角色（血量以 100 為基準、10 的倍數；速度暫定） ----
 // front / back：前排兩招、後排兩招的技能 id；null＝這格還沒定
 const HERO_DATA = [

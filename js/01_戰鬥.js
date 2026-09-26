@@ -182,7 +182,8 @@ function damagePlayer(p, d, src) {
 function hit(u, e, base, opt) {
   if (!e || e.ko) return null;
   opt = opt || {};
-  let d = base;
+  // base 可以是技能 id（查 SKILL_DMG 範圍、隨機取整數）或直接給數字
+  let d = typeof base === 'string' ? randInt(SKILL_DMG[base][0], SKILL_DMG[base][1]) : base;
   if (getGlob('tailwind')) d *= TAILWIND_MUL;
   d *= dmgMul();
   const rate = opt.crit != null ? Math.max(opt.crit, u.crit) : u.crit;
@@ -201,59 +202,61 @@ function hit(u, e, base, opt) {
 }
 
 // ---- 技能 ----
+// 傷害範圍寫在說明最後，例：（14~16）
+function dr(key) { const r = SKILL_DMG[key]; return `（${r[0]}~${r[1]}）`; }
 // target：'enemy'＝要點一隻敵人、'none'＝直接放
 const SKILLS = {
   // 主角
-  slash: { name: '劈斬', desc: '單傷 12', target: 'enemy', run(u, t) { hit(u, t, 12); } },
+  slash: { name: '劈斬', desc: '單傷' + dr('slash'), target: 'enemy', run(u, t) { hit(u, t, 'slash'); } },
   taunt: { name: '嘲諷', desc: '嘲諷全體敵人（單攻都打他），到他下個回合', target: 'none',
     run(u) { addGlob('taunt', u.id, 1); log('嘲諷：單攻都會打主角（到他下個回合）。', 'good'); } },
-  charge_in: { name: '突襲', desc: '衝上前排攻擊，單傷 18，打完留在前排（回合開始就在後排、這回合沒移動才能用）',
+  charge_in: { name: '突襲', desc: '衝上前排單傷，打完留在前排；回合開始就在後排、這回合沒換位才能用' + dr('charge_in'),
     target: 'enemy', needsChargeMode: true,
     usable(u) { return u.startBack && !u.moved && u.row === 'back'; },
     run(u, t, extra) {
       if (extra && extra.swap) { const o = uById(extra.swap); if (o && !o.ko && o.row === 'front') { o.row = 'back'; if (isND(o)) exhaust(o, false); } }
       u.row = 'front';
-      hit(u, t, 18);
+      hit(u, t, 'charge_in');
     } },
-  hold: { name: '不退', desc: '背水：到他下個回合，所有攻擊都衝著他來，每被打一次反擊 8；第一擊致命傷留 1 血', target: 'none', bw: true,
+  hold: { name: '不退', desc: '背水：到他下個回合，所有攻擊都衝著他來，每被打一次就反擊；第一擊致命傷留 1 血（反擊 ' + SKILL_DMG.hold_counter.join('~') + '）', target: 'none', bw: true,
     run(u) { addGlob('taunt', u.id, 1, { counter: true, lock: true }); log('主角：「想過去？先過我這關！」（佔位）', 'good'); } },
   // V
   guard: { name: '格擋', desc: '下一次受到的傷害減 50%', target: 'none',
     run(u) { u.guard = true; log('格擋：V 下一次受傷減半。'); } },
-  rend: { name: '割裂', desc: '單傷 14', target: 'enemy', run(u, t) { hit(u, t, 14); } },
-  knives: { name: '飛刀', desc: '擲三把，隨機打敵人，每把 5、爆擊率 30%', target: 'none',
-    run(u) { for (let i = 0; i < 3; i++) { const es = aliveEnemies(); if (!es.length) break; hit(u, pick(es), 5, { crit: 0.3 }); } } },
+  rend: { name: '割裂', desc: '單傷' + dr('rend'), target: 'enemy', run(u, t) { hit(u, t, 'rend'); } },
+  knives: { name: '飛刀', desc: '擲三把，隨機打敵人，爆擊率 30%（每把 ' + SKILL_DMG.knives.join('~') + '）', target: 'none',
+    run(u) { for (let i = 0; i < 3; i++) { const es = aliveEnemies(); if (!es.length) break; hit(u, pick(es), 'knives', { crit: 0.3 }); } } },
   focus: { name: '蓄力', desc: '下一次攻擊必定爆擊（飛刀三把都算）', target: 'none',
     run(u) { u.charged = true; log('蓄力：V 下一招必定爆擊。'); } },
-  bladedance: { name: '刀舞', desc: '背水：單傷 16、爆擊率 50%，擊殺就再攻擊一次（隨機目標），可以一直連下去', target: 'enemy', bw: true,
+  bladedance: { name: '刀舞', desc: '背水：單傷、爆擊率 50%，擊殺就再攻擊一次（隨機目標），可以一直連下去' + dr('bladedance'), target: 'enemy', bw: true,
     run(u, t) {
       let target = t, n = 0;
       while (target && n < 12) {
-        const r = hit(u, target, 16, { crit: 0.5 }); n++;
+        const r = hit(u, target, 'bladedance', { crit: 0.5 }); n++;
         if (!r || !r.kill) break;
         const es = aliveEnemies(); target = es.length ? pick(es) : null;
         if (target) log('刀舞擊殺，再攻擊一次！', 'good');
       }
     } },
   // K
-  double: { name: '雙擊', desc: '單傷 6，打兩下', target: 'enemy', run(u, t) { hit(u, t, 6); hit(u, t, 6); } },
+  double: { name: '雙擊', desc: '單傷打兩下（每下 ' + SKILL_DMG.double.join('~') + '）', target: 'enemy', run(u, t) { hit(u, t, 'double'); hit(u, t, 'double'); } },
   dust: { name: '揚塵', desc: '全體敵人 20% 失手，持續兩回合（到 K 的第二個下回合）', target: 'none',
     run(u) { addGlob('dust', u.id, 2); log('揚塵：敵人 20% 失手（兩回合）。'); } },
-  windblade: { name: '風刃', desc: '群傷，每隻 7', target: 'none',
-    run(u) { aliveEnemies().forEach(e => hit(u, e, 7)); } },
+  windblade: { name: '風刃', desc: '群傷（每隻 ' + SKILL_DMG.windblade.join('~') + '）', target: 'none',
+    run(u) { aliveEnemies().forEach(e => hit(u, e, 'windblade')); } },
   tailwind: { name: '順風', desc: '全隊傷害 +30%，到 K 的下個回合', target: 'none',
     run(u) { addGlob('tailwind', u.id, 1); log('順風：全隊傷害 +30%（到 K 下個回合）。', 'good'); } },
-  k_bw: { name: 'K 背水', desc: '背水（名字待定）：大群傷，每隻 16', target: 'none', bw: true,
-    run(u) { aliveEnemies().forEach(e => hit(u, e, 16)); } },
+  k_bw: { name: 'K 背水', desc: '背水（名字待定）：大群傷（每隻 ' + SKILL_DMG.k_bw.join('~') + '）', target: 'none', bw: true,
+    run(u) { aliveEnemies().forEach(e => hit(u, e, 'k_bw')); } },
   // L
-  frostburst: { name: '霜爆', desc: '近身單傷 16', target: 'enemy', run(u, t) { hit(u, t, 16); } },
-  icespike: { name: '冰刺', desc: '單傷 20（全隊最高）', target: 'enemy', run(u, t) { hit(u, t, 20); } },
+  frostburst: { name: '霜爆', desc: '近身單傷' + dr('frostburst'), target: 'enemy', run(u, t) { hit(u, t, 'frostburst'); } },
+  icespike: { name: '冰刺', desc: '單傷，全隊最高' + dr('icespike'), target: 'enemy', run(u, t) { hit(u, t, 'icespike'); } },
   freeze: { name: '凍結', desc: '一隻敵人的下一次行動往後推一格', target: 'enemy',
     run(u, t) { pushBack(t.id); log(`凍結：${t.name} 的下一次行動往後一格。`); fx(t.id, '往後一格', 'miss'); } },
-  bloodfrost: { name: '血霜花', desc: '背水：全體敵人各吃 8，每隻 50% 被凍住（跳過下一次行動）', target: 'none', bw: true,
+  bloodfrost: { name: '血霜花', desc: '背水：群傷，每隻 50% 被凍住（跳過下一次行動）（每隻 ' + SKILL_DMG.bloodfrost.join('~') + '）', target: 'none', bw: true,
     run(u) {
       aliveEnemies().forEach(e => {
-        const r = hit(u, e, 8);
+        const r = hit(u, e, 'bloodfrost');
         if (r && !r.kill && rnd() < 0.5) { e.skipNext = true; log(`${e.name} 被凍住（空過下一次行動）。`, 'good'); fx(e.id, '凍住', 'miss'); }
       });
     } },
@@ -367,7 +370,7 @@ function attackPlayer(e, p, base, mul) {
   const tg = getGlob('taunt');
   if (tg && tg.counter && tg.owner === p.id && !p.ko && !e.ko) {
     log('不退：主角反擊！', 'good');
-    hit(p, e, 8);
+    hit(p, e, 'hold_counter');
   }
 }
 
