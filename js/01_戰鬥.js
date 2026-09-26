@@ -184,9 +184,9 @@ function hit(u, e, base, opt) {
   opt = opt || {};
   // base 可以是技能 id（查 SKILL_DMG 範圍、隨機取整數）或直接給數字
   let d = typeof base === 'string' ? randInt(SKILL_DMG[base][0], SKILL_DMG[base][1]) : base;
-  if (getGlob('tailwind')) d *= TAILWIND_MUL;
   d *= dmgMul();
-  const rate = opt.crit != null ? Math.max(opt.crit, u.crit) : u.crit;
+  let rate = opt.crit != null ? Math.max(opt.crit, u.crit) : u.crit;
+  if (getGlob('tailwind')) rate += TAILWIND_CRIT;
   const crit = B.forceCrit || rnd() < rate;
   if (B.forceCrit) B.chargeUsed = true;
   if (crit) d *= CRIT_MUL;
@@ -244,8 +244,8 @@ const SKILLS = {
     run(u) { addGlob('dust', u.id, 2); log('揚塵：敵人 20% 失手（兩回合）。'); } },
   windblade: { name: '風刃', desc: '群傷（每隻 ' + SKILL_DMG.windblade.join('~') + '）', target: 'none',
     run(u) { aliveEnemies().forEach(e => hit(u, e, 'windblade')); } },
-  tailwind: { name: '順風', desc: '全隊傷害 +30%，到 K 的下個回合', target: 'none',
-    run(u) { addGlob('tailwind', u.id, 1); log('順風：全隊傷害 +30%（到 K 下個回合）。', 'good'); } },
+  tailwind: { name: '順風', desc: '全隊爆擊率 +20%，到 K 的下個回合', target: 'none',
+    run(u) { addGlob('tailwind', u.id, 1); log('順風：全隊爆擊率 +20%（到 K 下個回合）。', 'good'); } },
   k_bw: { name: 'K 背水', desc: '背水（名字待定）：大群傷（每隻 ' + SKILL_DMG.k_bw.join('~') + '）', target: 'none', bw: true,
     run(u) { aliveEnemies().forEach(e => hit(u, e, 'k_bw')); } },
   // L

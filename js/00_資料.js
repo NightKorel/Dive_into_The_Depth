@@ -19,7 +19,7 @@ const REGEN_TICKS = 3;         //       共 3 次
 const K_HEAL_BONUS = 0.1;      // K 特性「治癒」：用醫療物時目標當下多回 10%
 const EXHAUST_FIRST = 0.4;     // 脫力第一次：拉到 40%（主角是「加上」40%）
 const EXHAUST_LATER = 0.2;     // 脫力之後：拉到 20%（主角是「加上」20%）
-const TAILWIND_MUL = 1.3;      // 順風：全隊增傷 30%（暫定）
+const TAILWIND_CRIT = 0.2;     // 順風：全隊爆擊率 +20%（納可 2026-09-26）
 const DUST_MISS = 0.2;         // 揚塵：敵人 20% 失手
 const DUMMY_SPD = 11;          // 木樁速度（暫定）
 
