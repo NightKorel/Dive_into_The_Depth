@@ -34,11 +34,11 @@ const SKILL_DMG = {
   knives: [6, 8],        // V 飛刀（每把，不帶爆擊率）
   ambush: [14, 16],      // V 偷襲（爆擊率 50%）
   bladedance: [16, 19],  // V 刀舞
-  double: [9, 10],       // K 雙擊（每下）：客場招要誘人，兩下打得贏風刃打一隻
+  double: [7, 8],        // K 雙擊（每下）：多段，期望比單傷基準稍高；打一隻仍贏風刃
   windblade: [7, 8],     // K 風刃（每隻）
   k_bw: [16, 19],        // K 風暴（背水，每隻）
   frostburst: [24, 28],  // L 霜觸：客場招要誘人，比冰刺強（近身用魔法危險但威力最大）
-  hail: [4, 5],          // L 冰雹：每一顆（顆數擲 4d3）
+  hail: [3, 4],          // L 冰雹：每一顆（顆數擲 4d3，平均 8 顆≈28，比霜觸稍高）
   icespike: [20, 23],    // L 冰刺
   bloodfrost: [8, 9],    // L 血霜花（每隻）
 };
@@ -70,29 +70,29 @@ const DUMMY_ACTIONS = {
 };
 
 // 預設組合（木樁設定面板一鍵套用）
-// 強度抓法（2026-09-26）：亂按的測試大約會輸一到四成、一般組合 5 到 7 輪（會想的人會更快），
+// 強度抓法（2026-09-26 v0.0.19 重調）：亂按的測試大約會輸三到四成、一般組合 7 到 8 輪（會想的人會更快），
 // 前排大約挨 3 到 4 下就進瀕死，背水那一套才測得到。沙包不打人，專門測傷害。
 const DUMMY_PRESETS = [
   { name: '沙包', dummies: [
     { hp: 400, dmg: 10, pattern: ['idle', 'idle', 'idle', 'idle'] },
   ] },
   { name: '單攻木樁', dummies: [
-    { hp: 100, dmg: 30, pattern: ['single', 'single', 'single', 'single'] },
-    { hp: 100, dmg: 30, pattern: ['single', 'single', 'single', 'single'] },
+    { hp: 110, dmg: 36, pattern: ['single', 'single', 'single', 'single'] },
+    { hp: 110, dmg: 36, pattern: ['single', 'single', 'single', 'single'] },
   ] },
   { name: '群攻木樁', dummies: [
-    { hp: 200, dmg: 48, pattern: ['group', 'group', 'group', 'group'] },
+    { hp: 220, dmg: 58, pattern: ['group', 'group', 'group', 'group'] },
   ] },
   { name: '打打群群', dummies: [
-    { hp: 100, dmg: 30, pattern: ['single', 'single', 'group', 'group'] },
-    { hp: 100, dmg: 30, pattern: ['group', 'group', 'single', 'single'] },
+    { hp: 110, dmg: 32, pattern: ['single', 'single', 'group', 'group'] },
+    { hp: 110, dmg: 32, pattern: ['group', 'group', 'single', 'single'] },
   ] },
   { name: '搗亂組', dummies: [
-    { hp: 80, dmg: 26, pattern: ['single', 'swap', 'single', 'push'] },
-    { hp: 80, dmg: 26, pattern: ['push', 'single', 'swap', 'group'] },
-    { hp: 80, dmg: 26, pattern: ['single', 'group', 'push', 'swap'] },
+    { hp: 100, dmg: 38, pattern: ['single', 'swap', 'single', 'push'] },
+    { hp: 100, dmg: 38, pattern: ['push', 'single', 'swap', 'group'] },
+    { hp: 100, dmg: 38, pattern: ['single', 'group', 'push', 'swap'] },
   ] },
   { name: '大木樁', dummies: [
-    { hp: 450, dmg: 46, pattern: ['single', 'single', 'group', 'swap'] },
+    { hp: 500, dmg: 48, pattern: ['single', 'single', 'group', 'swap'] },
   ] },
 ];

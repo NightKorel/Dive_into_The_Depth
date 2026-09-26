@@ -4,7 +4,7 @@
    ======================================================== */
 
 const ui = { screen: 'setup', pending: null, cfg: null };
-const CFG_KEY = 'yuan2_dummy_cfg_v2';  // 預設組合改過數值就換版本號，舊設定才不會蓋掉新預設
+const CFG_KEY = 'yuan2_dummy_cfg_v3';  // 預設組合改過數值就換版本號，舊設定才不會蓋掉新預設
 const $ = sel => document.querySelector(sel);
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -38,8 +38,8 @@ function renderSetup() {
       Object.entries(DUMMY_ACTIONS).map(([k, v]) => `<option value="${k}" ${s.pattern[j] === k ? 'selected' : ''}>${v}</option>`).join('') + '</select>';
     return `<div class="dummy-card ${s.on ? '' : 'off'}">
       <label class="dummy-head"><input type="checkbox" ${s.on ? 'checked' : ''} onchange="toggleDummy(${i},this.checked)"> 木樁 ${i + 1}</label>
-      <div class="slider-row"><span>血量</span><input type="range" min="50" max="600" step="10" value="${s.hp}" ${s.on ? '' : 'disabled'} oninput="setVal(${i},'hp',this.value)"><b id="hp${i}">${s.hp}</b></div>
-      <div class="slider-row"><span>攻擊</span><input type="range" min="4" max="60" step="1" value="${s.dmg}" ${s.on ? '' : 'disabled'} oninput="setVal(${i},'dmg',this.value)"><b id="dmg${i}">${s.dmg}</b></div>
+      <div class="slider-row"><span>血量</span><input type="range" min="50" max="800" step="10" value="${s.hp}" ${s.on ? '' : 'disabled'} oninput="setVal(${i},'hp',this.value)"><b id="hp${i}">${s.hp}</b></div>
+      <div class="slider-row"><span>攻擊</span><input type="range" min="4" max="80" step="1" value="${s.dmg}" ${s.on ? '' : 'disabled'} oninput="setVal(${i},'dmg',this.value)"><b id="dmg${i}">${s.dmg}</b></div>
       <div class="pattern">${[0, 1, 2, 3].map(sel).join('<span class="arrow">→</span>')}</div>
     </div>`;
   }).join('');
