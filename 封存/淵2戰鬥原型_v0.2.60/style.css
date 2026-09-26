@@ -1,0 +1,493 @@
+/* 潛淵 — 戰鬥磚塊制原型樣式。深淵色調、發光磚塊。 */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: radial-gradient(ellipse at top, #16203a 0%, #0a0e1a 70%);
+  color: #dfe6f2;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  min-height: 100vh;
+  padding: 12px;
+}
+#game { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.panel {
+  background: rgba(28, 38, 62, 0.7);
+  border: 1px solid rgba(120, 150, 210, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.row-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #9fb2d6; margin-bottom: 6px; }
+.cap { font-weight: bold; }
+
+/* 血條 */
+.hpbar { position: relative; height: 22px; border-radius: 11px; background: #1b2540; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+.hpbar .hpfill { height: 100%; transition: width .35s ease; }
+.hpbar.enemy .hpfill { background: linear-gradient(90deg, #b23b3b, #e06666); }
+.hpbar.team .hpfill { background: linear-gradient(90deg, #2e8b6f, #4fd1a5); }
+.hpbar.stamina .hpfill { background: linear-gradient(90deg, #b98a2e, #e6c34f); }
+/* 體力條：薄一點、貼在血條下面，不佔畫面高度 */
+/* 血量／體力兩條 bar 同結構＝標籤等寬、bar 起點對齊，看起來整齊 */
+.bar-row { display: flex; align-items: center; gap: 6px; position: relative; }
+.bar-row + .bar-row { margin-top: 4px; }
+.bar-label { width: 2.4em; flex-shrink: 0; font-size: 11px; text-align: right; }
+.bar-label.hp { color: #7fd8b6; }
+.bar-label.sta { color: #d9c081; }
+.bar-row .hpbar { flex: 1; }
+/* ALL IN！按鈕：只在體力滿時浮出、疊在體力條上，不佔額外版面 */
+#btnAllIn { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4;
+  padding: 3px 16px; font-size: 13px; font-weight: 900; letter-spacing: 1px; border: none; border-radius: 10px;
+  background: linear-gradient(90deg, #e0a030, #ff5b5b); color: #fff; cursor: pointer;
+  box-shadow: 0 0 12px rgba(255,160,60,.8); text-shadow: 0 1px 2px #000; animation: allinPulse .8s infinite; }
+#btnAllIn.show { display: block; }
+#btnAllIn.active { background: linear-gradient(90deg, #ff5b5b, #ffd35b); box-shadow: 0 0 18px rgba(255,90,90,.95); }
+@keyframes allinPulse { 0%,100%{ transform: translate(-50%,-50%) scale(1); } 50%{ transform: translate(-50%,-50%) scale(1.09); } }
+.hpbar.stamina { height: 14px; }
+.hpbar.stamina span { line-height: 14px; font-size: 10px; }
+/* 預計消耗段：排好還沒出牌時，體力條右端會被抽乾的那截＝半透明輕輕閃動 */
+.stamina-ghost { position: absolute; top: 0; height: 100%; z-index: 2; display: none;
+  background: rgba(255,255,255,.45); border-left: 1px solid rgba(255,255,255,.7);
+  animation: ghostPulse 1s ease-in-out infinite; pointer-events: none; }
+.stamina-ghost.show { display: block; }
+@keyframes ghostPulse { 0%,100%{ opacity: .25; } 50%{ opacity: .7; } }
+.hpbar span { position: absolute; inset: 0; text-align: center; line-height: 22px; font-size: 12px; font-weight: bold; text-shadow: 0 1px 2px #000; }
+
+/* 敵人 */
+#enemyArea { position: relative; text-align: center; padding: 6px 12px; }
+#battleTier { font-size: 12px; font-weight: bold; color: #d9a5ff; letter-spacing: 2px; margin-bottom: 4px; text-shadow: 0 0 6px rgba(180,120,220,.5); }
+#enemyRow { display: flex; gap: 16px; justify-content: center; align-items: flex-start; }
+.enemy-card { flex: 0 1 160px; cursor: pointer; border-radius: 8px; transition: transform .4s ease, opacity .4s ease, filter .4s ease; }
+.enemy-card:hover { background: rgba(255,255,255,.05); } /* 提示可點選目標 */
+.enemy-card .hpbar.enemy { height: 15px; }
+.enemy-card .hpbar.enemy span { line-height: 15px; font-size: 10px; }
+/* 目標只用箭頭標示；非目標「不」變暗/縮小/灰階（牠一樣會攻擊）。切換時輕輕彈一下就好、結束回正常大小。 */
+.enemy-card.focus { animation: enemyEnter .4s ease; }
+.enemy-card.sub { }
+.enemy-card.dead { animation: enemyDie .6s forwards; pointer-events: none; }
+@keyframes enemyDie { 0%{opacity:1} 100%{opacity:0; transform:scale(.5) translateY(18px); filter:grayscale(1) brightness(.4)} }
+@keyframes enemyEnter { 0%{transform:scale(.9)} 55%{transform:scale(1.06)} 100%{transform:scale(1)} }
+.enemy-name { position: relative; font-size: 14px; font-weight: bold; margin-bottom: 4px; color: #f0c0c0; text-align: center; }
+.enemy-name .focus-arrow { position: absolute; top: 50%; right: calc(50% + 1.8em); transform: translateY(-50%); color: var(--hero-color, #ebcb8b); display: none; }
+/* 目標箭頭：縮放+透明度脈動(transform/opacity＝GPU、不吃效能)＝看起來活的、可點 */
+.enemy-card.focus .enemy-name .focus-arrow { display: block; animation: arrowBeckon 1s ease-in-out infinite; }
+@keyframes arrowBeckon {
+  0%,100% { transform: translateY(-50%) scale(1);   opacity: .6; }
+  50%     { transform: translateY(-50%) scale(1.32); opacity: 1; }
+}
+.ecard-intent { margin-top: 4px; font-size: 12px; min-height: 26px; line-height: 1.35; }
+.ecard-intent .i-normal { color: #ffcf87; }
+.ecard-intent .i-heavy { color: #ff8080; font-weight: bold; animation: warnPulse .8s infinite; }
+.ecard-intent .i-reson { color: #c9a0ff; font-weight: bold; animation: warnPulse 1s infinite; }
+.intent { margin-top: 6px; font-size: 13px; color: #ffcf87; }
+#floatLayer, #teamFloat { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+#teamArea { position: relative; }
+.floatnum { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-weight: 900; font-size: 34px; color: #ffd35b; text-shadow: 0 0 10px #000, 0 2px 4px #000; animation: floatup 1.1s cubic-bezier(.2,.8,.3,1) forwards; }
+.floatnum.crit { font-size: 52px; color: #ff5b5b; -webkit-text-stroke: 1.5px #400; text-shadow: 0 2px 5px #000; }
+.floatnum.heal { color: #5fe0a0; text-shadow: 0 0 10px #0f6, 0 2px 4px #000; }
+.floatnum.stam { color: #e6c34f; text-shadow: 0 0 10px #7a5410, 0 2px 4px #000; } /* 體力色＝金，跟治療綠區分開，別跟回血搞混 */
+.floatnum.dmg { font-size: 30px; color: #ff8a8a; text-shadow: 0 0 10px #900, 0 2px 4px #000; }
+.floatnum.block { font-size: 26px; color: #8fd0ff; text-shadow: 0 0 10px #036, 0 2px 4px #000; }
+.floatnum.miss { font-size: 30px; color: #dfe6f2; letter-spacing: 2px; text-shadow: 0 0 10px #048, 0 2px 4px #000; }
+.floatnum.full { font-size: 30px; color: #ffdf6b; letter-spacing: 2px; top: 20%; text-shadow: 0 0 14px #ffb300, 0 0 6px #fff, 0 2px 4px #000; }
+@keyframes floatup {
+  0%   { opacity: 0; top: 46%; transform: translateX(-50%) scale(.4); }
+  15%  { opacity: 1; transform: translateX(-50%) scale(1.2); }
+  32%  { transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; top: 6%; }
+}
+
+/* 出擊：磚逐個亮 */
+/* !important：出擊彈跳一定要贏過順子/對子的脈動動畫(不然彈跳被蓋掉、磚塊不彈就消失) */
+.tile.firing { animation: fireTile .32s ease !important; z-index: 3; }
+@keyframes fireTile { 0%{transform:scale(1)} 35%{transform:scale(1.28); filter:brightness(1.9) saturate(1.3); box-shadow:0 0 20px #fff} 100%{transform:scale(1); filter:none} }
+
+/* 序列 combo 即時高亮：不用螢光、但調亮一點＋發光脈動閃爍(才明顯)。順子=亮藍、對子=暖金。 */
+:root { --c-straight: #83c3ea; --c-pair: #ecb662; }
+.tile.instraight { outline: 2px solid var(--c-straight); outline-offset: 1px; --gc: 131,195,234; animation: comboPulse 1.05s ease-in-out infinite; }
+.tile.instraight .num { color: var(--c-straight); }
+.tile.inpair { outline: 2px solid var(--c-pair); outline-offset: 1px; --gc: 236,182,98; animation: comboPulse 1.05s ease-in-out infinite; }
+.tile.inpair .num { color: var(--c-pair); }
+/* 順子/對子：發光一呼一吸的脈動＝明顯又不刺眼 */
+@keyframes comboPulse {
+  0%,100% { box-shadow: 0 0 3px rgba(var(--gc),.25); }
+  50%     { box-shadow: 0 0 9px rgba(var(--gc),.7); }
+}
+/* 磚設了 position:relative(放徽章用)，會蓋過後面的「預計傷害/出擊會」效果字；把效果字墊到磚的上層 */
+.calc, .seqeff { position: relative; z-index: 3; }
+/* 又是順子又是對子的牌：框與數字在兩色間輪流閃爍 */
+.tile.inboth { outline: 2px solid var(--c-straight); outline-offset: 1px; animation: bothFrame 1.1s infinite; }
+.tile.inboth .num { animation: bothNum 1.1s infinite; }
+@keyframes bothFrame {
+  0%,49.9% { outline-color: var(--c-straight); box-shadow: 0 0 11px rgba(131,195,234,.75); }
+  50%,100% { outline-color: var(--c-pair);     box-shadow: 0 0 11px rgba(236,182,98,.75); }
+}
+@keyframes bothNum {
+  0%,49.9% { color: var(--c-straight); }
+  50%,100% { color: var(--c-pair); }
+}
+/* 滿順 1-2-3-4-5：招牌大絕（靜態金光，不做無限動畫＝省繪製、不卡頓） */
+.tile.fullstraight { outline: 2px solid #ffe082; outline-offset: 1px; box-shadow: 0 0 16px #ffca28, 0 0 7px #ffe082; z-index: 2; }
+.tile.fullstraight .num { color: #ffe082; }
+.calc .fulltag { color:#ffdf6b; font-weight:900; text-shadow:0 0 8px #ffb300; margin-right:6px; }
+
+/* 滿順出擊：金色一閃（只淡入淡出、不縮放＝輕量） */
+#burst { position: fixed; inset: 0; pointer-events: none; z-index: 48; opacity: 0;
+  background: radial-gradient(circle at 50% 42%, rgba(255,225,130,.5), transparent 62%); }
+#burst.go { animation: goldBurst .5s ease-out; }
+@keyframes goldBurst { 0%{opacity:0} 16%{opacity:1} 100%{opacity:0} }
+
+/* 震動（局部：套在被打的那一區，不震整個畫面） */
+.shakeS { animation: shakeS .28s; }
+.shakeB { animation: shakeB .45s; }
+@keyframes shakeS { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-3px,2px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,-2px)} }
+@keyframes shakeB { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-9px,5px)} 30%{transform:translate(9px,-6px)} 50%{transform:translate(-8px,7px)} 70%{transform:translate(7px,-4px)} 90%{transform:translate(-4px,2px)} }
+
+/* 敵人受擊閃紅抖動 */
+#enemyArea.hit { animation: enemyHit .38s; }
+@keyframes enemyHit { 0%{filter:none;transform:translateX(0)} 20%{filter:brightness(2.2) saturate(2);transform:translateX(-7px)} 55%{transform:translateX(7px)} 100%{filter:none;transform:translateX(0)} }
+
+/* 重擊/共鳴預告脈動 */
+.intent.heavy { animation: warnPulse .8s infinite; }
+.intent.reson { animation: warnPulse 1s infinite; }
+@keyframes warnPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* 負面波動：卡面染紫紅、微微脈動 */
+#cardArea.negwave { border-color: rgba(190,120,220,.6); box-shadow: 0 0 14px rgba(160,90,200,.35) inset; }
+#cardArea.negwave .card-name { color: #e59ad0; }
+#cardArea.negwave .card-desc { color: #d9b0e6; }
+#cardArea.negwave .card-title::after { content: '　⚠ 被扭曲'; color: #e07acb; font-size: 11px; }
+
+/* 隊伍 */
+.team-label, .card-title { font-size: 12px; color: #9fb2d6; margin-bottom: 5px; }
+#heroRow { display: flex; gap: 6px; justify-content: center; margin: 2px 0; }
+.hero { width: 46px; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--hc); box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
+.hero b { font-size: 15px; color: var(--hc); line-height: 1; }
+.hero .hnums { font-size: 9px; color: #8fa0be; margin-top: 2px; letter-spacing: 1px; }
+
+/* 波動卡 */
+.card-name { font-size: 16px; font-weight: bold; color: #c9b6f0; }
+.card-desc { font-size: 13px; color: #b9c4dc; }
+.foresight { font-size: 11px; color: #8fa0c0; margin-top: 4px; }
+
+/* 磚塊 */
+.tilebar { display: flex; flex-wrap: wrap; gap: 5px; min-height: 62px; align-items: center; align-content: flex-start; }
+/* 手牌＋出招帶的磚都用同一個響應式寬度＝一排剛好 5 張、兩邊尺寸一致（出招帶仍是 flex＝可拖放）。
+   減 0.8px 是留鋪排容差，避免小數進位害它掉成一排 4 張。 */
+.tilebar .tile, body.eff-on .tilebar .tile { width: calc((100% - 20px) / 5 - 0.8px); }
+.tile {
+  position: relative;
+  width: 58px; aspect-ratio: 1; border-radius: 8px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.2); user-select: none;
+  transition: transform .1s;
+}
+.tile:hover { transform: translateY(-3px); }
+/* 卡片上的字加一層很淡的小影子，讓白字在彩色底上更清楚（別太重＝別變醜） */
+.tile span { text-shadow: 0 1px 1.5px rgba(0,0,0,.45); }
+/* 數字＝凸字效果：上緣一道淡高光＋下方深陰影＝看起來浮凸出來（不靠底色塊、不靠改色） */
+.tile .num { font-size: 22px; font-weight: 900; line-height: 1;
+  text-shadow: 0 -1px 0 rgba(255,255,255,.35), 0 1px 1px rgba(0,0,0,.6), 0 2px 3px rgba(0,0,0,.4); }
+.tile .nm { font-size: 10px; margin-top: 2px; }
+.tile .who { font-size: 9px; opacity: .7; }
+/* 右上角小效果徽章：離上框/右框等距、乾淨 emoji（不加底色/陰影）；絕對定位不影響排版 */
+.tile .badge { position: absolute; top: 3px; right: 3px; font-size: 11px; line-height: 1; pointer-events: none; }
+/* 依號碼分類上色 */
+.n1, .n5 { background: linear-gradient(160deg, #8a2f2f, #c04a4a); }   /* 打人 紅 */
+.n2 { background: linear-gradient(160deg, #5a3a7a, #8158b0); }       /* 減益 紫 */
+.n3 { background: linear-gradient(160deg, #2e7057, #43a07a); }       /* 保命 綠 */
+.n4 { background: linear-gradient(160deg, #2f5a8a, #4f86c0); }       /* 增益 藍 */
+.seqbar .tile { box-shadow: 0 0 8px rgba(120,180,255,0.4); cursor: grab; }
+.tile.dragging { transform: scale(1.14); opacity: .9; box-shadow: 0 0 18px rgba(255,255,255,.65); z-index: 6; cursor: grabbing; }
+
+/* 試算 */
+.calc { margin-top: 8px; font-size: 13px; color: #cfe0ff; line-height: 1.6; }
+.calc b { color: #ffd35b; }
+.calc .big { font-size: 24px; font-weight: 900; color: #d9c793; text-shadow: 0 1px 2px #000; }
+.calc .detail { font-size: 11px; color: #8090a8; }
+.seqeff { margin-top: 6px; font-size: 12px; color: #bfe6d6; line-height: 1.7; }
+.seqeff .noeff { color: #8090a8; }
+
+/* 按鈕 */
+#btnBar { display: flex; gap: 8px; }
+#btnBar button {
+  flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(150,180,240,0.4);
+  background: #24304f; color: #dfe6f2; font-size: 14px; cursor: pointer; font-weight: bold;
+}
+#btnBar button:hover { background: #2e3c60; }
+#btnBar button.primary { background: linear-gradient(90deg, #b23b6b, #e0567a); border: none; }
+/* 出擊：一圈亮粉光暈擴散＋微微一縮，配合噴出的亮粉小點 */
+#btnAttack.fire { animation: attackFlash .5s ease-out; }
+@keyframes attackFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(255,130,205,.8), 0 0 12px 2px rgba(255,160,225,.7); transform: scale(1.04); }
+  100% { box-shadow: 0 0 26px 14px rgba(255,130,205,0), 0 0 12px 2px rgba(255,160,225,0); transform: scale(1); }
+}
+.spark { position: fixed; width: 5px; height: 5px; border-radius: 50%; pointer-events: none; z-index: 90;
+  background: radial-gradient(circle, #ffe0f2, #ff7ac8); box-shadow: 0 0 6px #ff9ad8;
+  transform: translate(-50%,-50%); animation: sparkFly .55s ease-out forwards; }
+@keyframes sparkFly {
+  0%   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3); opacity: 0; }
+}
+#btnBar button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* 重擊紅光邊框（單次掉血 ≥25% 才閃、低調一瞬） */
+#vignette { position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: 0; box-shadow: inset 0 0 95px 22px rgba(200,25,25,.72); }
+#vignette.flash { animation: vig .55s ease-out; }
+@keyframes vig { 0%{opacity:0} 22%{opacity:1} 100%{opacity:0} }
+
+#version { position: fixed; right: 8px; bottom: 6px; font-size: 11px; color: #6b7a96; opacity: .7; pointer-events: none; z-index: 60; letter-spacing: 1px; }
+
+#log { font-size: 12px; color: #9fb2d6; min-height: 40px; line-height: 1.7; padding: 4px 8px; }
+#log .win { color: #5fe0a0; font-weight: bold; }
+#log .lose { color: #ff7a7a; font-weight: bold; }
+
+/* 飄字一律不換行，避免中文被逐字直排 */
+.floatnum { white-space: nowrap; }
+/* 溢出傷害：小小的、不強調 */
+.floatnum.spill { font-size: 16px; color: #ffb27a; opacity: .9; text-shadow: 0 0 6px #000, 0 1px 2px #000; }
+
+/* ---------- 左上角選單／設定視窗 ---------- */
+#btnMenu { position: fixed; right: 8px; top: 8px; z-index: 70; width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid rgba(150,175,220,.35); background: rgba(28,38,62,.9); color: #cdd8ee; font-size: 17px; cursor: pointer; }
+#btnMenu:hover { background: rgba(45,60,95,.95); }
+.menu-pop { position: fixed; right: 8px; top: 46px; z-index: 70; display: none; flex-direction: column; gap: 2px;
+  background: rgba(24,32,54,.97); border: 1px solid rgba(150,175,220,.3); border-radius: 8px; padding: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.5); }
+.menu-pop.show { display: flex; }
+.menu-pop button { background: none; border: none; color: #cdd8ee; font-size: 14px; text-align: left; padding: 7px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.menu-pop button:hover { background: rgba(90,120,180,.3); }
+
+/* ---------- 選關畫面 ---------- */
+.level-select { position: fixed; inset: 0; z-index: 85; display: none; align-items: center; justify-content: center; background: rgba(6,10,20,.82); }
+.level-select.show { display: flex; }
+.ls-panel { width: min(360px, 88vw); display: flex; flex-direction: column; gap: 12px; padding: 4px; }
+.ls-title { font-size: 22px; font-weight: 800; color: #e6ecf8; text-align: center; letter-spacing: 2px; }
+.ls-hint { font-size: 12px; color: #8fa0c4; text-align: center; margin-top: -6px; margin-bottom: 4px; }
+.ls-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 16px; border-radius: 12px;
+  border: 1px solid rgba(150,180,240,.35); background: rgba(30,42,70,.92); color: #eef2fb; cursor: pointer; transition: transform .1s, background .15s; }
+.ls-btn:hover { background: rgba(48,66,110,.96); transform: translateY(-2px); }
+.ls-btn .ls-name { font-size: 19px; font-weight: 800; }
+.ls-btn .ls-sub { font-size: 12.5px; color: #a8b6d6; }
+
+.modal-mask { position: fixed; inset: 0; z-index: 80; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+.modal-mask.show { display: flex; }
+.modal { width: min(360px, 90vw); background: #1a2440; border: 1px solid rgba(150,175,220,.35); border-radius: 12px; padding: 18px 20px; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+.modal h3 { margin: 0 0 14px; font-size: 17px; color: #e6ecf8; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.set-row label { font-size: 14px; color: #c3cee6; }
+.set-row input[type=text] { flex: 1; max-width: 160px; padding: 6px 9px; border-radius: 6px; border: 1px solid #34406a; background: #101a34; color: #eef2fb; font-size: 14px; }
+/* 自訂色盤：預覽色塊＋三條拖桿（色相/濃淡/明暗），不跳原生色盤＝沒有快速選色 */
+.color-prev { width: 42px; height: 26px; border-radius: 6px; border: 1px solid rgba(255,255,255,.3); box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.set-colorbox input[type=range] { width: 100%; margin: 5px 0; height: 14px; -webkit-appearance: none; appearance: none; border-radius: 7px; cursor: pointer; }
+.set-colorbox input.hue { background: linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.set-colorbox input.sl { background: #33405f; }
+.set-colorbox input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #34406a; box-shadow: 0 1px 3px rgba(0,0,0,.5); cursor: pointer; }
+.set-colorbox input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #34406a; cursor: pointer; }
+.set-row.toggle { cursor: pointer; }
+/* 進子頁的入口列：整列可點、右邊一個箭頭 */
+.set-row.nav { cursor: pointer; padding: 4px 0; }
+.set-row.nav:hover label { color: #fff; }
+.set-row.nav .nav-arrow { font-size: 22px; color: #9fb0cf; line-height: 1; }
+.slabel { display: block; font-size: 11px; color: #9fb0cf; margin: 6px 0 1px; }
+.set-row.toggle .switch { font-size: 13px; font-weight: bold; padding: 4px 14px; border-radius: 12px; background: #33405f; color: #9fb0cf; }
+.set-row.toggle .switch.on { background: linear-gradient(90deg,#2e8b6f,#4fd1a5); color: #06231a; }
+.set-hint { font-size: 11px; color: #8090ac; line-height: 1.5; margin: -4px 0 14px; }
+.modal-close { width: 100%; padding: 9px; border: none; border-radius: 8px; background: #38466e; color: #dfe6f5; cursor: pointer; font-size: 14px; }
+.modal-close:hover { background: #45558a; }
+
+/* 卡池/棄牌：可點開看內容。span 保持同字級＝不撐大排版，只加虛線底線＋游標提示可點 */
+.pileview { cursor: pointer; border-bottom: 1px dashed rgba(159,178,214,.6); }
+.pileview:hover { color: #fff; border-bottom-color: #fff; }
+/* 打開後的磚清單 */
+.pile-count { font-size: 13px; font-weight: normal; color: #9fb0cf; }
+.pile-grid { display: flex; flex-wrap: wrap; gap: 6px; max-height: 46vh; overflow-y: auto; margin-bottom: 14px; }
+.pile-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: #eef2fb;
+  padding: 4px 9px; border-radius: 7px; background: rgba(255,255,255,.05);
+  border: 1px solid var(--hc); border-left-width: 4px; }
+.pile-chip b { font-size: 14px; color: var(--hc); filter: brightness(1.35); }
+.pile-chip i { font-size: 10.5px; color: #9fb0cf; font-style: normal; margin-left: 2px; }
+.pile-empty { color: #8090ac; font-size: 13px; text-align: center; padding: 18px 0; margin-bottom: 8px; }
+
+/* 卡牌詳細效果：OFF 維持原樣（58×58 置中）；ON 換成「左上數字＋旁名字＋下描述」的固定大卡。
+   兩種模式各自尺寸鎖死、所有卡一致，不會大小不一。 */
+.tile .eff { display: none; }
+/* ON：上面「數字 技能名」一行，底下整塊都是描述（描述字不縮、要看得清楚）；不顯示角色名（顏色已夠分辨） */
+body.eff-on .tile {
+  display: grid; width: 74px; aspect-ratio: 1; padding: 4px 5px; box-sizing: border-box;
+  grid-template-columns: auto 1fr; grid-template-rows: auto 1fr;
+  grid-template-areas: "num name" "eff eff";
+  column-gap: 4px; row-gap: 2px; text-align: left; justify-content: initial; align-items: center;
+}
+body.eff-on .tile .who { display: none; }
+body.eff-on .tile .num { grid-area: num; display: block; font-size: 15px; line-height: 1; }
+body.eff-on .tile .nm  { grid-area: name; margin: 0; font-size: 10.5px; }
+body.eff-on .tile .eff { grid-area: eff; display: block; align-self: start; overflow: hidden;
+  font-size: 9px; line-height: 1.25;
+  /* 斷行漂亮：strict＝標點不落行首、不硬拆「-2」「(含隊友)」；balance＝每行長度盡量均衡（不會最後一行只剩一個字） */
+  text-align: center; text-wrap: balance; line-break: strict; word-break: normal; overflow-wrap: anywhere;
+  color: rgba(255,255,255,.82); }
+/* 描述裡的數字(3、-2、-30%…)加粗＋純白＝一眼看到關鍵數值 */
+body.eff-on .tile .eff .dnum { font-weight: 900; color: #fff; }
+
+/* ============================================================
+   Nord 經典色票統一（納可 2026-08-16：面板上所有顏色都落在一個經典色票）
+   Nord palette（nordtheme.com）：Polar Night 深底、Snow Storm 文字、
+   Frost 藍青、Aurora 紅橘黃綠紫。全 UI 顏色都取自這裡＝天生協調。
+   設計原則沿用 v2：圖/地分離、磚塊當主角、出擊唯一主 CTA、全靜態無新動畫。
+   ============================================================ */
+:root {
+  --n0:#2e3440; --n1:#3b4252; --n2:#434c5e; --n3:#4c566a;      /* Polar Night 深底 */
+  --n4:#d8dee9; --n5:#e5e9f0;                                  /* Snow Storm 文字 */
+  --fr2:#88c0d0; --fr3:#81a1c1; --fr4:#5e81ac;                 /* Frost 藍青 */
+  --red:#bf616a; --orange:#d08770; --yellow:#ebcb8b; --green:#a3be8c; --purple:#b48ead; /* Aurora */
+  --muted:#7b869c;                                             /* 安靜標籤色 */
+  /* combo 高亮改用 Nord：順子=frost 藍、對子=aurora 黃 */
+  --c-straight:#88c0d0; --c-pair:#ebcb8b;
+}
+
+/* 背景＝Nord 深底再壓暗成「深淵」（維持 Nord 藍灰調、不是死黑）＋極淡光塵 */
+body { color: var(--n4);
+  background: radial-gradient(ellipse 130% 90% at 50% -10%, #2b3140 0%, #20252f 52%, #171b23 100%); }
+body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(2px 2px at 22% 26%, rgba(216,222,233,.06), transparent 60%),
+    radial-gradient(1.6px 1.6px at 74% 18%, rgba(216,222,233,.05), transparent 60%),
+    radial-gradient(1.6px 1.6px at 44% 74%, rgba(216,222,233,.045), transparent 60%),
+    radial-gradient(2px 2px at 84% 60%, rgba(216,222,233,.04), transparent 60%);
+  box-shadow: inset 0 0 170px 46px rgba(15,18,24,.6); }
+
+/* 容器＝退後（Nord polar night、安靜細邊） */
+.panel { background: rgba(59,66,82,.5); border: 1px solid rgba(76,86,106,.5); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+#enemyArea { background: rgba(46,52,64,.6); box-shadow: inset 0 6px 22px rgba(0,0,0,.4); }
+
+/* 標題＝安靜標籤感 */
+.row-head, .team-label, .card-title { color: var(--muted); letter-spacing: 2px; font-size: 12px; }
+.row-head { border-bottom: 1px solid rgba(76,86,106,.35); padding-bottom: 6px; }
+#battleTier { color: var(--purple); text-shadow: 0 0 6px rgba(180,142,173,.4); }
+.card-name { color: var(--purple); }
+.card-desc { color: #aeb6c6; }
+.foresight { color: var(--muted); }
+.calc { color: #c3cddd; } .calc b { color: var(--yellow); }
+.calc .big { color: var(--yellow); text-shadow: 0 0 10px rgba(235,203,139,.35), 0 1px 2px #000; }
+.seqeff { color: #a9c9bb; }
+#log { color: #9aa6bd; } #log .win { color: var(--green); } #log .lose { color: var(--red); }
+
+/* 血條／體力／敵血＝Nord 綠/黃/紅（軌道 Nord 深底＋填色頂部細高光） */
+.hpbar { background: #2e3440; box-shadow: inset 0 1px 3px rgba(0,0,0,.5); }
+.hpbar .hpfill { box-shadow: inset 0 1px 0 rgba(255,255,255,.26); }
+.hpbar.team .hpfill    { background: linear-gradient(90deg, #7a9b6e, #a3be8c); }
+.hpbar.stamina .hpfill { background: linear-gradient(90deg, #c9a86a, #ebcb8b); }
+.hpbar.enemy .hpfill   { background: linear-gradient(90deg, #9d4d55, #bf616a); }
+.bar-label.hp { color: var(--green); } .bar-label.sta { color: var(--yellow); }
+.enemy-name { color: #e0a9ad; }
+
+/* 磚塊＝主角：乾淨深色描邊＋一道頂部細光（色塊底色來自角色代表色，已在 JS 改成 Nord 四色） */
+.tile { border: 1px solid rgba(0,0,0,.42); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(0,0,0,.35); }
+.seqbar .tile { box-shadow: 0 0 7px rgba(136,192,208,.4), inset 0 1px 0 rgba(255,255,255,.22); }
+
+/* 角色小方塊：安靜 */
+.hero { background: rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+
+/* 按鈕層次：出擊＝唯一主 CTA（Nord 紅＝攻擊/危險），其他三顆退後（Nord polar night） */
+#btnBar button { background: var(--n2); border-color: rgba(76,86,106,.7); color: #c3cbdb; font-weight: 600; }
+#btnBar button:hover { background: #4a556d; color: var(--n5); }
+#btnBar button.primary { background: linear-gradient(180deg, #c56b73, #a8535b); border: none; color: #fff;
+  font-weight: 800; box-shadow: 0 2px 10px rgba(191,97,106,.45); }
+#btnBar button.primary:disabled { box-shadow: none; }
+
+/* ALL IN！＝Nord 黃→紅（跟出擊同一組暖 Aurora） */
+#btnAllIn { background: linear-gradient(90deg, #ebcb8b, #bf616a); box-shadow: 0 0 12px rgba(235,203,139,.7); }
+#btnAllIn.active { background: linear-gradient(90deg, #bf616a, #ebcb8b); box-shadow: 0 0 18px rgba(191,97,106,.9); }
+
+/* 飄字＝對到 Nord（傷害紅、治療綠、體力黃、格擋藍青） */
+.floatnum { color: var(--yellow); }
+.floatnum.crit { color: #d97b83; -webkit-text-stroke: 1.5px #401b1e; }
+.floatnum.heal { color: var(--green); text-shadow: 0 0 10px rgba(163,190,140,.5), 0 2px 4px #000; }
+.floatnum.dmg  { color: #cf7079; }
+.floatnum.stam { color: var(--yellow); text-shadow: 0 0 10px rgba(235,203,139,.5), 0 2px 4px #000; }
+.floatnum.block{ color: var(--fr2); text-shadow: 0 0 10px rgba(136,192,208,.5), 0 2px 4px #000; }
+.floatnum.full { color: var(--yellow); }
+
+/* 選單/選關/設定視窗＝一起對到 Nord，整體一致 */
+#btnMenu, .menu-pop { background: rgba(46,52,64,.95); border-color: rgba(76,86,106,.7); color: #cbd3e0; }
+.menu-pop button { color: #cbd3e0; } .menu-pop button:hover { background: rgba(94,129,172,.3); }
+.ls-btn, .modal { background: rgba(59,66,82,.95); border-color: rgba(76,86,106,.7); }
+.ls-btn:hover { background: #4a556d; }
+.modal-close { background: var(--n2); } .modal-close:hover { background: #4a556d; }
+
+/* 負面波動染色也對到 Nord 紫 */
+#cardArea.negwave { border-color: rgba(180,142,173,.6); box-shadow: 0 0 14px rgba(180,142,173,.3) inset; }
+#cardArea.negwave .card-name { color: #cfa3c4; } #cardArea.negwave .card-title::after { color: var(--purple); }
+
+/* ============================================================
+   質感精修 v1（納可 2026-08-16：照介面設計筆記做；喜歡圓角但要小一點）
+   1. 圓角收成一組小圓角系統（別大、別隨機）。
+   2. 陰影改「分層柔和」（3 條越遠越大越淡）＝真實光散射感，取代單條硬影。
+   全靜態、無新動畫。
+   ============================================================ */
+:root { --r-s:4px; --r-m:6px; --r-l:8px; }  /* 小圓角系統：小元件4、卡/鈕6、容器8 */
+
+/* 圓角：全畫面統一成小圓角（原本 8~12 偏大） */
+.panel, .modal, .ls-btn { border-radius: var(--r-l); }         /* 容器 8 */
+.tile, #btnBar button, .hero, .menu-pop, #btnMenu,
+.menu-pop button, .pile-chip, .modal-close { border-radius: var(--r-m); }  /* 卡/鈕 6 */
+.color-prev, .set-row input[type=text] { border-radius: var(--r-s); }      /* 小元件 4 */
+/* 血條/體力條維持膠囊（bar 的慣例，不動） */
+
+/* 分層柔和陰影：容器＝低高度、彈窗＝高高度、磚/鈕＝小浮起 */
+.panel { box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 2px 5px rgba(0,0,0,.13), 0 6px 14px rgba(0,0,0,.09); }
+.tile { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 2px rgba(0,0,0,.28), 0 2px 5px rgba(0,0,0,.16); }
+.seqbar .tile { box-shadow: 0 0 7px rgba(136,192,208,.4), inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(0,0,0,.28); }
+#btnBar button { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.16); }
+#btnBar button.primary { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 2px rgba(0,0,0,.25), 0 3px 10px rgba(191,97,106,.4); }
+/* 彈窗/選單＝浮得最高（分層更深） */
+.modal, .menu-pop, .ls-btn { box-shadow: 0 2px 6px rgba(0,0,0,.22), 0 8px 20px rgba(0,0,0,.28), 0 16px 40px rgba(0,0,0,.34); }
+
+/* 間距微調到 8pt 節奏（面板之間 8） */
+#game { gap: 8px; }
+
+/* ============================================================
+   質感精修 v2（納可 2026-08-16：收尾小修）
+   ============================================================ */
+/* ALL IN 按鈕圓角跟上小圓角系統（原 10 偏大） */
+#btnAllIn { border-radius: var(--r-m); }
+/* 磚上小徽章加淡影＝在亮色磚（金）上也看得清 */
+.tile .badge { text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+/* 敵人血條圓角＝小圓角（原膠囊在小血條上有點過圓），跟卡片一致 */
+.enemy-card .hpbar.enemy { border-radius: var(--r-s); }
+/* 手牌/出招帶那排「卡池・棄牌」可點字：虛線收細一點、更精緻 */
+.pileview { border-bottom-style: dotted; }
+/* 出招帶容量那行的數字對齊呼吸感：右側統計字距收一點 */
+#capText { letter-spacing: .3px; }
+/* log 底部一點上緣留白＝跟按鈕分開 */
+#log { margin-top: 2px; }
+
+/* ============================================================
+   文字語意配色（納可 2026-08-16：讓文字顏色＝意義，對到 Nord semantic）
+   紅=危險/傷害、黃=警示、紫=深淵/波動、綠=治療、藍=資訊/防禦。
+   ============================================================ */
+.intent, .ecard-intent .i-normal { color: #e0c48a; }      /* 一般攻擊＝黃/琥珀警示 */
+.intent.heavy, .ecard-intent .i-heavy { color: #d0777f; } /* 蓄力重擊＝Nord 紅危險 */
+.intent.reson, .ecard-intent .i-reson { color: #c3a0d0; } /* 深淵共鳴＝Nord 紫 */
+
+/* ============================================================
+   特效顏色調鮮豔（納可 2026-08-16：底層安靜、但飄字/combo 高亮要搶眼＝爽感）
+   原則：resting UI 維持低飽和 Nord；但「回饋特效」用飽和鮮色跳出來。
+   ============================================================ */
+/* 飄字：飽和鮮色＋強光暈（爆擊最兇） */
+.floatnum       { color: #ffd35b; text-shadow: 0 0 12px rgba(255,180,40,.6), 0 2px 4px #000; }
+.floatnum.dmg   { color: #ff7d7d; text-shadow: 0 0 12px rgba(255,60,60,.65), 0 2px 4px #000; }
+.floatnum.crit  { color: #ff4d4d; -webkit-text-stroke: 1.5px #4a0d0d;
+  text-shadow: 0 0 18px rgba(255,50,50,.85), 0 0 8px rgba(255,150,80,.7), 0 2px 5px #000; }
+.floatnum.heal  { color: #4dff9e; text-shadow: 0 0 14px rgba(50,230,140,.7), 0 2px 4px #000; }
+.floatnum.stam  { color: #ffcf47; text-shadow: 0 0 14px rgba(255,190,50,.7), 0 2px 4px #000; }
+.floatnum.block { color: #6fc6ff; text-shadow: 0 0 12px rgba(60,160,255,.65), 0 2px 4px #000; }
+.floatnum.full  { color: #ffe45c; text-shadow: 0 0 16px rgba(255,200,50,.9), 0 0 7px #fff, 0 2px 4px #000; }
+
+/* combo 高亮框：電光藍(順子)／暖金(對子)＝鮮豔跳出，光暈調亮調大 */
+:root { --c-straight: #62c8ff; --c-pair: #ffc23e; }
+@keyframes comboPulse {
+  0%,100% { box-shadow: 0 0 5px rgba(var(--gc),.45); }
+  50%     { box-shadow: 0 0 16px rgba(var(--gc),.95); }
+}
+.tile.instraight { --gc: 98,200,255; }
+.tile.inpair     { --gc: 255,194,62; }
+/* 滿順金框更閃 */
+.tile.fullstraight { box-shadow: 0 0 22px #ffca28, 0 0 10px #ffe082; }

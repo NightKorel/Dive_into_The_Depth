@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>潛淵 — 戰鬥磚塊制原型</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 左上角選單 -->
+<button id="btnMenu" title="選單">☰</button>
+<div id="menuPop" class="menu-pop">
+  <button id="menuLevels">🗺 選關</button>
+  <button id="menuSettings">⚙ 設定</button>
+</div>
+
+<!-- 選關畫面 -->
+<div id="levelSelect" class="level-select">
+  <div class="ls-panel">
+    <div class="ls-title">選擇戰鬥</div>
+    <div class="ls-hint">現在都是「淵蟲」，只差體型／強度（調基礎難度用）</div>
+    <button class="ls-btn" data-key="small"><span class="ls-name">小怪戰</span><span class="ls-sub">小淵蟲 ×2</span></button>
+    <button class="ls-btn" data-key="elite"><span class="ls-name">⚔ 菁英戰</span><span class="ls-sub">大淵蟲 ×2</span></button>
+    <button class="ls-btn" data-key="boss"><span class="ls-name">👑 Boss 戰</span><span class="ls-sub">淵蟲王 ×1</span></button>
+  </div>
+</div>
+<!-- 設定視窗 -->
+<div id="modalMask" class="modal-mask"><div class="modal" id="settingsModal"></div></div>
+
+<div id="game">
+
+  <!-- 回合條件卡（波動）＝最上面 -->
+  <div id="cardArea" class="panel">
+    <div class="card-title">潛淵波動</div>
+    <div id="cardName" class="card-name"></div>
+    <div id="cardDesc" class="card-desc"></div>
+    <div id="foresight" class="foresight"></div>
+  </div>
+
+  <!-- 敵人區 -->
+  <div id="enemyArea" class="panel">
+    <div id="battleTier"></div>
+    <div id="enemyRow"></div>
+    <div class="intent" id="enemyIntent"></div>
+    <div id="floatLayer"></div>
+  </div>
+
+  <!-- 四個角色（小方塊） -->
+  <div id="heroRow"></div>
+
+  <!-- 隊伍血條＋體力 -->
+  <div id="teamArea" class="panel">
+    <div class="bar-row"><span class="bar-label hp">血量</span><div class="hpbar team"><div class="hpfill" id="teamHpFill"></div><span id="teamHpText"></span></div></div>
+    <div class="bar-row"><span class="bar-label sta">體力</span><div class="hpbar stamina"><div class="hpfill" id="staminaFill"></div><div class="stamina-ghost" id="staminaGhost"></div><span id="staminaText"></span></div><button id="btnAllIn">ALL IN！</button></div>
+    <div id="teamFloat"></div>
+  </div>
+
+  <!-- 出招帶 -->
+  <div id="seqArea" class="panel">
+    <div class="row-head">
+      <span>出招帶</span>
+      <span id="capText" class="cap"></span>
+    </div>
+    <div id="seqSlots" class="tilebar"></div>
+    <div id="calc" class="calc"></div>
+    <div id="seqEff" class="seqeff"></div>
+  </div>
+
+  <!-- 手牌 -->
+  <div id="handArea" class="panel">
+    <div class="row-head"><span>手牌</span></div>
+    <div id="handTiles" class="tilebar"></div>
+  </div>
+
+  <!-- 按鈕 -->
+  <div id="btnBar">
+    <button id="btnStraight">一鍵順子</button>
+    <button id="btnPair">一鍵對子</button>
+    <button id="btnClear">清空</button>
+    <button id="btnAttack" class="primary">出擊！</button>
+  </div>
+
+  <div id="log"></div>
+</div>
+<div id="vignette"></div>
+<div id="burst"></div>
+<div id="version"></div>
+<script src="js/game.js"></script>
+</body>
+</html>
