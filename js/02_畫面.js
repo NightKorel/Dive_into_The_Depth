@@ -72,15 +72,23 @@ function beginBattle() {
   const dummies = ui.cfg.slots.filter(s => s.on).map(s => ({ hp: s.hp, dmg: s.dmg, pattern: s.pattern.slice() }));
   if (!dummies.length) return;
   setupBattle({ dummies, med: ui.cfg.med });
-  battleId++;
+  stepSeq++;
   ui.screen = 'battle'; ui.pending = null;
   guard(nextTurn);
 }
 let busy = false;
-// 每場戰鬥一個編號：重打／撤離後，上一場還沒跑完的計時器看到編號不同就自己停下（避免兩條回合流程同時跑）
-let battleId = 0;
+// 回合流程一次只准有「一個」排隊中的下一步：每排一次就拿新號碼，舊號碼的計時器醒來發現不是最新就自己作廢。
+// （v0.0.3 的 bug：玩家想很久才出手，看門狗誤以為卡住又多啟動一條流程，兩條流程搶著走，敵人回合拿到我方角色而出錯。）
+let stepSeq = 0;
 let lastProgress = Date.now();
-function later(fn, ms) { const id = battleId; setTimeout(() => { if (id === battleId && ui.screen === 'battle') guard(fn); }, ms); }
+function later(fn, ms) {
+  const my = ++stepSeq;
+  setTimeout(() => {
+    if (my !== stepSeq || ui.screen !== 'battle') return;
+    lastProgress = Date.now();
+    guard(fn);
+  }, ms);
+}
 // 包一層防護：出錯時把錯誤顯示在畫面上，並嘗試繼續，不讓整個遊戲停住
 function guard(fn) {
   try { fn(); } catch (err) { showError(err); busy = false; later(nextTurn, 600); }
@@ -93,7 +101,7 @@ function showError(err) {
 function nextTurn() {
   if (ui.screen !== 'battle') return;
   lastProgress = Date.now();
-  if (B.over || B.waiting) { render(); return; }
+  if (B.over || B.waiting) { busy = true; render(); return; }
   advance();
   const r = startTurn(B.cur);
   ui.pending = null;
@@ -101,8 +109,9 @@ function nextTurn() {
   render();
   if (r === 'player') return;
   if (r === 'skip') { checkAfterAction(); later(nextTurn, 500); return; }
+  const e = B.cur;
   later(() => {
-    enemyAct(B.cur);
+    if (B.cur === e && !e.ko) enemyAct(e);
     checkAfterAction();
     render();
     later(nextTurn, 450);
@@ -110,16 +119,18 @@ function nextTurn() {
 }
 function endPlayerTurn() {
   busy = true;
+  lastProgress = Date.now();
   ui.pending = null;
   checkAfterAction();
   render();
   later(nextTurn, 300);
 }
-// 看門狗：流程卡住超過 4 秒（不是在等玩家、也不是戰鬥結束或等人頂上），就自動往下走
+// 看門狗：電腦在跑流程（不是等玩家、不是結束、不是等人頂上）卻超過 4 秒沒動靜，就作廢排隊中的步驟、重新往下走
 setInterval(() => {
   if (ui.screen !== 'battle' || !busy || B.over || B.waiting) return;
   if (Date.now() - lastProgress > 4000) {
     log('（看門狗：流程卡住，自動恢復）', 'dim');
+    stepSeq++;
     busy = false;
     guard(nextTurn);
   }
@@ -128,8 +139,10 @@ window.addEventListener('error', e => showError(e.error || e.message));
 function myTurn() { return ui.screen === 'battle' && !busy && !B.over && !B.waiting && B.cur && B.cur.side === 'p'; }
 
 // ---- 玩家點擊 ----
+function clickMoveMenu() { if (!myTurn() || B.cur.moved) return; ui.pending = { type: 'move' }; render(); }
 function clickMove(opt) {
   if (!myTurn()) return;
+  ui.pending = null;
   const selfEx = doMove(B.cur, opt);
   if (selfEx) { endPlayerTurn(); return; }
   render();
@@ -171,7 +184,8 @@ function clickAlly(id) {
   useMed(B.cur, ui.pending.kind, t);
   endPlayerTurn();
 }
-function clickPass() { if (!myTurn()) return; log(`${B.cur.name} 待機。`, 'dim'); endPlayerTurn(); }
+// 沒有任何能用的招（例：主角移動後在後排，突襲不能用、另一格待定）時才出現的「結束回合」
+function clickEndTurn() { if (!myTurn()) return; log(`${B.cur.name} 沒有能用的招，結束回合。`, 'dim'); endPlayerTurn(); }
 function cancelPending() { ui.pending = null; render(); }
 function chooseStepUp(id) {
   if (!B.waiting) return;
@@ -179,37 +193,36 @@ function chooseStepUp(id) {
   render();
   later(nextTurn, 300);
 }
-function retryBattle() { setupBattle(B.cfg); battleId++; ui.screen = 'battle'; ui.pending = null; guard(nextTurn); }
-function backToSetup() { battleId++; ui.screen = 'setup'; busy = false; renderSetup(); }
+function retryBattle() { setupBattle(B.cfg); stepSeq++; ui.screen = 'battle'; ui.pending = null; guard(nextTurn); }
+function backToSetup() { stepSeq++; ui.screen = 'setup'; busy = false; renderSetup(); }
 
-// ================= 戰鬥畫面 =================
+// ================= 戰鬥畫面（手機一畫面看完：精簡版面） =================
+function shortName(u) { return u.side === 'e' ? '樁' + u.name.replace(/\D/g, '') : u.name; }
 function hpBar(u) {
   const w = Math.max(0, Math.round(u.hp / u.maxHp * 100));
   const nd = u.side === 'p' && isND(u);
-  return `<div class="hpbar ${nd ? 'nd' : ''} ${u.side === 'e' ? 'enemy' : ''}"><div class="fill" style="width:${w}%"></div><div class="line"></div></div>
-          <div class="hptext">${u.hp} / ${u.maxHp}</div>`;
+  return `<div class="hpbar ${nd ? 'nd' : ''} ${u.side === 'e' ? 'enemy' : ''}"><div class="fill" style="width:${w}%"></div><div class="line"></div></div>`;
 }
 function badges(u) {
   const b = [];
-  if (u.ko) b.push('<span class="badge ko">昏迷</span>');
-  else {
-    if (isND(u)) b.push(`<span class="badge nd">瀕死${u.bwUsed ? '（背水已用）' : ''}</span>`);
-    if (u.skipNext) b.push('<span class="badge ex">脫力</span>');
-    if (u.guard) b.push('<span class="badge">格擋</span>');
-    if (u.charged) b.push('<span class="badge">蓄力</span>');
-    if (u.hots.length) b.push(`<span class="badge heal">回春 ×${u.hots.reduce((a, h) => a + h.left, 0)}</span>`);
-    const tg = getGlob('taunt');
-    if (tg && tg.owner === u.id) b.push(`<span class="badge bw">${tg.counter ? '不退' : '嘲諷'}</span>`);
-  }
+  if (u.ko) return '<span class="badge ko">昏迷</span>';
+  if (isND(u)) b.push(`<span class="badge nd">瀕死${u.bwUsed ? '·背水已用' : ''}</span>`);
+  if (u.skipNext) b.push('<span class="badge ex">脫力</span>');
+  if (u.guard) b.push('<span class="badge">格擋</span>');
+  if (u.charged) b.push('<span class="badge">蓄力</span>');
+  if (u.hots.length) b.push(`<span class="badge heal">回春${u.hots.reduce((a, h) => a + h.left, 0)}</span>`);
+  const tg = getGlob('taunt');
+  if (tg && tg.owner === u.id) b.push(`<span class="badge bw">${tg.counter ? '不退' : '嘲諷'}</span>`);
   return b.join('');
 }
+// 順序條：目前行動的人放大在最前面，後面一排小圓點
 function renderOrder() {
-  const list = upcoming(Math.min(10, Math.max(B.cycle.length * 2, 6)));
+  const list = upcoming(Math.min(9, Math.max(B.cycle.length + 3, 6)));
   return list.map((u, i) => {
     if (!u) return '';
     const col = u.side === 'p' ? u.color : '#bf616a';
-    return `<div class="ord ${i === 0 ? 'now' : ''} ${u.skipNext ? 'skip' : ''}" style="border-color:${col}">
-      <span style="color:${col}">${esc(u.name)}</span>${u.skipNext ? '<small>空過</small>' : ''}</div>`;
+    const cls = i === 0 ? 'now' : '';
+    return `${i === 1 ? '<span class="ord-sep">›</span>' : ''}<span class="ord ${cls} ${u.skipNext ? 'skip' : ''} ${u.side}" style="--c:${col}">${esc(shortName(u))}</span>`;
   }).join('');
 }
 function renderEnemies() {
@@ -217,11 +230,11 @@ function renderEnemies() {
   return enemies().map(e => {
     const next = e.pattern.length ? e.pattern[e.pi % e.pattern.length] : 'idle';
     const charging = !e.ko && next === 'group';
+    const tags = (e.skipNext ? '<span class="badge ex">凍住</span>' : '') + (charging ? '<span class="badge warn">蓄力中……</span>' : '');
     return `<div class="card enemy ${e.ko ? 'dead' : ''} ${charging ? 'charging' : ''} ${targeting && !e.ko ? 'targetable' : ''} ${B.cur === e ? 'acting' : ''}"
       data-id="${e.id}" onclick="clickEnemy('${e.id}')">
-      <div class="cname">${esc(e.name)}</div>
-      ${hpBar(e)}
-      <div class="badges">${e.ko ? '<span class="badge ko">倒下</span>' : ''}${e.skipNext ? '<span class="badge ex">凍住</span>' : ''}${charging ? '<span class="badge warn">蓄力中……</span>' : ''}</div>
+      <div class="crow"><span class="cname">${esc(e.name)}</span><span class="hpnum">${e.ko ? '倒下' : e.hp}</span></div>
+      ${hpBar(e)}${tags ? `<div class="badges">${tags}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -232,18 +245,18 @@ function renderPartyRow(row) {
   if (!list.length) return '<div class="empty-row">（空）</div>';
   return list.map(p => {
     const pickable = (medPick && !p.ko) || (stepPick && !p.ko);
+    const bd = badges(p);
     return `<div class="card ally ${p.ko ? 'dead' : ''} ${B.cur === p ? 'acting' : ''} ${pickable ? 'targetable' : ''}"
       data-id="${p.id}" style="--c:${p.color}" onclick="clickAlly('${p.id}')">
-      <div class="cname" style="color:${p.color}">${esc(p.name)}</div>
-      ${hpBar(p)}
-      <div class="badges">${badges(p)}</div>
+      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
+      ${hpBar(p)}${bd ? `<div class="badges">${bd}</div>` : ''}
     </div>`;
   }).join('');
 }
 function skillBtn(u, id, side) {
   if (!id) {
     const nm = (u.data.emptyName && u.data.emptyName[side]) || '待定';
-    return `<button class="btn skill" disabled title="這格還沒定">${esc(nm)}（待定）</button>`;
+    return `<button class="btn skill" disabled><b>${esc(nm)}</b><small>還沒定</small></button>`;
   }
   const s = SKILLS[id];
   const ok = skillUsable(u, id);
@@ -256,32 +269,36 @@ function renderActions() {
   const u = B.cur;
   if (!u || u.side !== 'p' || busy) return `<div class="prompt dim">${u ? esc(u.name) + ' 行動中……' : ''}</div>`;
   const side = u.row;
-  let html = `<div class="act-head"><b style="color:${u.color}">${esc(u.name)}</b> 的回合 · ${side === 'front' ? '前排' : '後排'}
-    <span class="trait">${esc(u.data.trait)}</span></div>`;
+  let html = `<div class="act-head"><b style="color:${u.color}">${esc(u.name)}</b><span class="dim">・${side === 'front' ? '前排' : '後排'}</span><span class="trait">${esc(u.data.trait)}</span></div>`;
   if (ui.pending) {
-    if (ui.pending.type === 'target') html += `<div class="prompt">點一隻敵人當目標（${esc(SKILLS[ui.pending.id].name)}）</div>`;
-    if (ui.pending.type === 'med') html += `<div class="prompt">點一名隊友（${ui.pending.kind === 'aid' ? '急救' : '回春'}）</div>`;
-    if (ui.pending.type === 'charge') {
-      html += '<div class="prompt">突襲：要衝進空位，還是跟前排的人對調？</div><div class="btn-row">';
+    const p = ui.pending;
+    if (p.type === 'target') html += `<div class="prompt">點一隻敵人（${esc(SKILLS[p.id].name)}）</div>`;
+    if (p.type === 'med') html += `<div class="prompt">點一名隊友（${p.kind === 'aid' ? '急救' : '回春'}）</div>`;
+    if (p.type === 'charge') {
+      html += '<div class="prompt">突襲：衝進空位，還是跟前排的人對調？</div><div class="btn-row">';
       html += `<button class="btn" onclick="chooseCharge(null)">衝進空位</button>`;
       frontAlive().forEach(f => { html += `<button class="btn" onclick="chooseCharge('${f.id}')">跟 ${esc(f.name)} 對調</button>`; });
       html += '</div>';
     }
-    html += `<button class="btn small" onclick="cancelPending()">取消</button>`;
+    if (p.type === 'move') {
+      const to = side === 'front' ? '後排' : '前排';
+      html += `<div class="prompt">換位：移到${to}空位，還是跟${to}的人對調？</div><div class="btn-row">`;
+      html += `<button class="btn" ${canFlip(u) ? '' : 'disabled'} onclick="clickMove({flip:true})">移到${to}空位</button>`;
+      swapCandidates(u).forEach(o => { html += `<button class="btn" onclick="clickMove({swap:'${o.id}'})">跟 ${esc(o.name)} 對調</button>`; });
+      html += '</div>';
+    }
+    html += `<button class="btn small ghost" onclick="cancelPending()">取消</button>`;
     return html;
   }
-  if (!u.moved) {
-    html += '<div class="btn-row move-row"><span class="lbl">移動（行動前一次，不花回合）</span>';
-    html += `<button class="btn small" ${canFlip(u) ? '' : 'disabled'} onclick="clickMove({flip:true})">移到${side === 'front' ? '後排' : '前排'}</button>`;
-    swapCandidates(u).forEach(o => { html += `<button class="btn small" onclick="clickMove({swap:'${o.id}'})">跟 ${esc(o.name)} 對調</button>`; });
-    html += '</div>';
-  }
   const ids = skillsFor(u);
+  const anyUsable = ids.some(id => id && skillUsable(u, id)) || B.med > 0;
   html += `<div class="skill-row ${ids.length === 1 ? 'bw-only' : ''}">${ids.map(id => skillBtn(u, id, side)).join('')}</div>`;
-  html += `<div class="btn-row">
-    <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('aid')">急救（醫療物 ${B.med}）</button>
-    <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('regen')">回春（醫療物 ${B.med}）</button>
-    <button class="btn small" onclick="clickPass()">待機</button></div>`;
+  html += `<div class="btn-row tools">
+    ${u.moved ? '<span class="dim small">已換位</span>' : '<button class="btn small" onclick="clickMoveMenu()">換位</button>'}
+    <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('aid')">急救</button>
+    <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('regen')">回春</button>
+    <span class="dim small">醫療物 ${B.med}</span>
+    ${anyUsable ? '' : '<button class="btn small" onclick="clickEndTurn()">結束回合</button>'}</div>`;
   return html;
 }
 function renderResult() {
@@ -293,27 +310,27 @@ function renderResult() {
 }
 function render() {
   if (ui.screen !== 'battle') return;
-  const enr = B.round >= ENRAGE_ROUND ? ` <span class="enrage">全場傷害 +${Math.round((dmgMul() - 1) * 100)}%</span>` : '';
+  const enr = B.round >= ENRAGE_ROUND ? ` <span class="enrage">傷害+${Math.round((dmgMul() - 1) * 100)}%</span>` : '';
   const glob = B.glob.filter(g => g.key !== 'taunt').map(g => `<span class="badge">${GLOB_NAMES[g.key]}</span>`).join('');
-  const logs = B.log.slice(-40).reverse().map(l => `<div class="log-line ${l.cls}">${esc(l.msg)}</div>`).join('');
+  const logs = B.log.slice(-30).reverse().map(l => `<div class="log-line ${l.cls}">${esc(l.msg)}</div>`).join('');
   $('#app').innerHTML = `
     <div class="battle">
-      <div class="topbar"><span>第 ${B.round} 輪${enr}</span><span>${glob}</span>
-        <button class="btn small" onclick="backToSetup()">木樁設定</button></div>
+      <div class="topbar"><span class="round">第 ${B.round} 輪${enr}</span><span class="globs">${glob}</span>
+        <button class="btn small ghost" onclick="backToSetup()">設定</button></div>
       <div class="order">${renderOrder()}</div>
-      <div class="enemy-row">${renderEnemies()}</div>
+      <div class="enemy-row n${enemies().length}">${renderEnemies()}</div>
       <div class="party">
-        <div class="prow"><div class="plabel">前排</div><div class="pcards">${renderPartyRow('front')}</div></div>
-        <div class="prow"><div class="plabel">後排</div><div class="pcards">${renderPartyRow('back')}</div></div>
+        <div class="prow"><div class="plabel">前排</div>${renderPartyRow('front')}</div>
+        <div class="prow"><div class="plabel">後排</div>${renderPartyRow('back')}</div>
       </div>
       <div class="actions">${renderActions()}</div>
       <div class="log">${logs}</div>
       <details class="cheat" ${ui.cheatOpen ? 'open' : ''} ontoggle="ui.cheatOpen=this.open">
         <summary>測試用按鈕</summary>
-        <div class="btn-row"><span class="lbl">打到瀕死（10%）</span>${players().filter(p => !p.ko).map(p => `<button class="btn small" onclick="cheatND('${p.id}')">${esc(p.name)}</button>`).join('')}</div>
+        <div class="btn-row"><span class="lbl">打到瀕死</span>${players().filter(p => !p.ko).map(p => `<button class="btn small" onclick="cheatND('${p.id}')">${esc(p.name)}</button>`).join('')}</div>
         <div class="btn-row">
-          <button class="btn small" onclick="cheatFull()">我方全員回滿</button>
-          <button class="btn small" onclick="cheatEnemyLow()">敵人全剩 1 血</button>
+          <button class="btn small" onclick="cheatFull()">我方回滿</button>
+          <button class="btn small" onclick="cheatEnemyLow()">敵人剩 1 血</button>
           <button class="btn small" onclick="cheatRound()">輪數 +5</button>
           <button class="btn small" onclick="cheatMed()">醫療物 +3</button>
         </div>
@@ -321,7 +338,6 @@ function render() {
     </div>${renderResult()}`;
   flushFloats();
 }
-// 飄字：畫在最上層，不會被重畫洗掉
 function flushFloats() {
   const layer = $('#floatLayer');
   const evs = B.events.splice(0);
