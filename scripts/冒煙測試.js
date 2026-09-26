@@ -13,7 +13,7 @@ vm.createContext(ctx);
 vm.runInContext(
   fs.readFileSync(path.join(JS, '00_資料.js'), 'utf8') + '\n' +
   fs.readFileSync(path.join(JS, '01_戰鬥.js'), 'utf8') +
-  '\n;this.__ = { B, setupBattle, advance, startTurn, enemyAct, checkAfterAction, stepUp, alivePlayers, aliveEnemies, frontAlive, skillsFor, skillUsable, useSkill, doMove, canFlip, swapCandidates, useMed, SKILLS, DUMMY_PRESETS };',
+  '\n;this.__ = { B, setupBattle, advance, startTurn, enemyAct, checkAfterAction, stepUp, stepUpCandidates, isExhausted, alivePlayers, aliveEnemies, frontAlive, skillsFor, skillUsable, useSkill, doMove, canFlip, swapCandidates, useMed, SKILLS, DUMMY_PRESETS };',
   ctx);
 const G = ctx.__, B = G.B;
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -26,7 +26,7 @@ for (let n = 0; n < N; n++) {
   let steps = 0;
   while (!B.over) {
     if (++steps > 3000) throw new Error(`第 ${n} 場打不完（${preset.name}）`);
-    if (B.waiting) { G.stepUp(pick(G.alivePlayers()).id); continue; }
+    if (B.waiting) { if (!G.stepUp(pick(G.stepUpCandidates()).id)) throw new Error('頂上失敗'); continue; }
     G.advance();
     const u = B.cur;
     if (!u || u.ko) throw new Error('輪到不存在或昏迷的人行動');

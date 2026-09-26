@@ -207,7 +207,7 @@ function badges(u) {
   const b = [];
   if (u.ko) return '<span class="badge ko">昏迷</span>';
   if (isND(u)) b.push(`<span class="badge nd">瀕死${u.bwUsed ? '·背水已用' : ''}</span>`);
-  if (u.skipNext) b.push('<span class="badge ex">脫力</span>');
+  if (u.exState) b.push(`<span class="badge ex">${u.id === 'hero' ? (u.exFirst ? '振作中' : '硬撐中') : '脫力'}</span>`);
   if (u.guard) b.push('<span class="badge">格擋</span>');
   if (u.charged) b.push('<span class="badge">蓄力</span>');
   if (u.hots.length) b.push(`<span class="badge heal">回春${u.hots.reduce((a, h) => a + h.left, 0)}</span>`);
@@ -222,7 +222,7 @@ function renderOrder() {
     if (!u) return '';
     const col = u.side === 'p' ? u.color : '#bf616a';
     const cls = i === 0 ? 'now' : '';
-    return `${i === 1 ? '<span class="ord-sep">›</span>' : ''}<span class="ord ${cls} ${u.skipNext ? 'skip' : ''} ${u.side}" style="--c:${col}">${esc(shortName(u))}</span>`;
+    return `${i === 1 ? '<span class="ord-sep">›</span>' : ''}<span class="ord ${cls} ${u.skipNext || u.exState === 'down' ? 'skip' : ''} ${u.side}" style="--c:${col}">${esc(shortName(u))}</span>`;
   }).join('');
 }
 function renderEnemies() {
@@ -244,11 +244,11 @@ function renderPartyRow(row) {
   const list = players().filter(p => p.row === row);
   if (!list.length) return '<div class="empty-row">（空）</div>';
   return list.map(p => {
-    const pickable = (medPick && !p.ko) || (stepPick && !p.ko);
+    const pickable = (medPick && !p.ko) || (stepPick && stepUpCandidates().includes(p));
     const bd = badges(p);
     return `<div class="card ally ${p.ko ? 'dead' : ''} ${B.cur === p ? 'acting' : ''} ${pickable ? 'targetable' : ''}"
       data-id="${p.id}" style="--c:${p.color}" onclick="clickAlly('${p.id}')">
-      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${!p.ko && p.movePt ? '<span class="mv" title="還有移動點：可以換位、也可以被換">🔁</span>' : ''}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
+      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${p.ko ? '' : `<span class="mv ${p.movePt ? '' : 'used'}" title="${p.movePt ? '還有移動點' : '移動點用掉了'}">🔁</span>`}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
       ${hpBar(p)}${bd ? `<div class="badges">${bd}</div>` : ''}
     </div>`;
   }).join('');
@@ -284,7 +284,7 @@ function renderActions() {
       const to = side === 'front' ? '後排' : '前排';
       html += `<div class="prompt">換位：移到${to}空位，還是跟${to}的人對調？（對調會用掉兩人的移動點）</div><div class="btn-row">`;
       html += `<button class="btn" ${canFlip(u) ? '' : 'disabled'} onclick="clickMove({flip:true})">移到${to}空位</button>`;
-      alivePlayers().filter(o => o !== u && o.row !== side).forEach(o => { html += `<button class="btn" ${o.movePt ? '' : 'disabled'} onclick="clickMove({swap:'${o.id}'})">跟 ${esc(o.name)} 對調${o.movePt ? '' : '（沒移動點）'}</button>`; });
+      alivePlayers().filter(o => o !== u && o.row !== side).forEach(o => { const ok = swapCandidates(u).includes(o); const why = !o.movePt ? '（沒移動點）' : (!ok ? '（脫力中，不能上前排）' : ''); html += `<button class="btn" ${ok ? '' : 'disabled'} onclick="clickMove({swap:'${o.id}'})">跟 ${esc(o.name)} 對調${why}</button>`; });
       html += '</div>';
     }
     html += `<button class="btn small ghost" onclick="cancelPending()">取消</button>`;

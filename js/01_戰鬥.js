@@ -47,7 +47,7 @@ function setupBattle(cfg) {
     B.units.push({
       id: h.id, side: 'p', name: h.name, color: h.color, data: h,
       maxHp: h.maxHp, hp: h.maxHp, spd: h.spd, crit: h.crit, dodge: h.dodge, row: h.row,
-      ko: false, skipNext: false, bwUsed: false, exCount: 0, guard: false, charged: false,
+      ko: false, skipNext: false, exState: null, exFirst: false, bwUsed: false, exCount: 0, guard: false, charged: false,
       hots: [], movePt: true, startBack: false,   // movePt：移動點，每次輪到自己時刷新
     });
   });
@@ -109,9 +109,16 @@ function startTurn(u) {
   if (u.side === 'p' && u.hots.length) {
     u.hots = u.hots.filter(h => { heal(u, pctOf(u, h.pct), '回春'); h.left--; return h.left > 0; });
   }
+  if (u.side === 'p' && u.exState === 'recover') exhaustRecover(u);
+  if (u.side === 'p' && u.exState === 'down') {
+    u.exState = 'recover'; u.movePt = true;
+    log(`${u.name} ${u.id === 'hero' ? (u.exFirst ? '振作中' : '硬撐中') : '脫力中'}，這回合空過。`, 'dim');
+    fx(u.id, '空過', 'miss');
+    return 'skip';
+  }
   if (u.skipNext) {
     u.skipNext = false;
-    log(`${u.name} ${u.side === 'p' ? '脫力中' : '被凍住了'}，這回合空過。`, 'dim');
+    log(`${u.name} 被凍住了，這回合空過。`, 'dim');
     fx(u.id, '空過', 'miss');
     return 'skip';
   }
@@ -131,28 +138,35 @@ function heal(u, amt, src) {
   fx(u.id, '+' + (u.hp - before), 'heal');
   log(`${u.name} ${src ? src + '，' : ''}回復 ${u.hp - before}。`, 'heal');
 }
-// 脫力（主角是振作／硬撐）。onOwnTurn＝在自己回合移動觸發，這回合直接耗掉
+// 脫力（主角是振作／硬撐）。流程：觸發 → 脫力回合（空過）→ 下一次輪到他，回合開始才回血，然後照常行動。
+// exState：'down'＝下次輪到要空過；'recover'＝下次輪到先回血。onOwnTurn＝自己回合換位觸發，這回合就算脫力回合。
+// 脫力中（exState 有值）的人不能上前排。
+function isExhausted(u) { return !!u.exState; }
 function exhaust(u, onOwnTurn) {
   u.exCount++;
-  const first = u.exCount === 1;
+  u.exFirst = u.exCount === 1;
+  u.exState = onOwnTurn ? 'recover' : 'down';
+  const nm = u.id === 'hero' ? (u.exFirst ? '振作' : '硬撐') : '脫力';
+  log(`${u.name} ${nm}：這回合喘口氣，下次輪到時才回血。`, 'heal');
+  fx(u.id, nm, 'miss');
+}
+function exhaustRecover(u) {
+  const before = u.hp;
   if (u.id === 'hero') {
-    const add = pctOf(u, first ? EXHAUST_FIRST : EXHAUST_LATER);
-    const before = u.hp;
-    u.hp = Math.min(u.maxHp, u.hp + add);
-    log(`主角${first ? '振作' : '硬撐'}：血量 +${u.hp - before}，空過一回合。`, 'heal');
-    fx(u.id, (first ? '振作 +' : '硬撐 +') + (u.hp - before), 'heal');
+    u.hp = Math.min(u.maxHp, u.hp + pctOf(u, u.exFirst ? EXHAUST_FIRST : EXHAUST_LATER));
+    log(`主角${u.exFirst ? '振作' : '硬撐'}起來：血量 +${u.hp - before}。`, 'heal');
+    fx(u.id, (u.exFirst ? '振作 +' : '硬撐 +') + (u.hp - before), 'heal');
   } else {
-    const target = pctOf(u, first ? EXHAUST_FIRST : EXHAUST_LATER);
-    const before = u.hp;
+    const target = pctOf(u, u.exFirst ? EXHAUST_FIRST : EXHAUST_LATER);
     if (u.hp < target) u.hp = target;
-    log(`${u.name} 脫力：血量回到 ${u.hp}，空過一回合。`, 'heal');
-    fx(u.id, '脫力 +' + (u.hp - before), 'heal');
+    log(`${u.name} 撐起來了：血量回到 ${u.hp}。`, 'heal');
+    fx(u.id, '+' + (u.hp - before), 'heal');
   }
+  u.exState = null;
   if (!isND(u)) u.bwUsed = false;
-  if (!onOwnTurn) u.skipNext = true;
 }
 function knockOut(p) {
-  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.charged = false; p.skipNext = false;
+  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.charged = false; p.skipNext = false; p.exState = null;
   removeFromCycle(p.id);
   B.glob = B.glob.filter(g => g.owner !== p.id);
   log(`${p.name} 昏迷了！`, 'bad');
@@ -277,7 +291,7 @@ function skillUsable(u, id) {
 function canFlip(u) { return u.row === 'back' || frontAlive().length > 1; }
 // 移動點（像 DnD 的移動速度）：每人一點，輪到自己時刷新；只能在自己行動前用。
 // 對調＝兩個人都花掉移動點，所以想等一下被隊友換走的人，自己這回合就不能先動。敵人造成的移位、昏迷補位不算。
-function swapCandidates(u) { return alivePlayers().filter(o => o !== u && o.row !== u.row && o.movePt); }
+function swapCandidates(u) { return alivePlayers().filter(o => o !== u && o.row !== u.row && o.movePt && !(o.row === 'back' && isExhausted(o))); }
 // opt: {flip:true} 或 {swap:id}；回傳 true＝自己脫力，這回合結束
 function doMove(u, opt) {
   if (!u.movePt) return false;
@@ -285,9 +299,11 @@ function doMove(u, opt) {
   if (opt.swap) {
     const o = uById(opt.swap);
     if (!o || o.ko || o.row === u.row || !o.movePt) return false;
+    if (o.row === 'back' && isExhausted(o)) return false;   // 脫力的人不能上前排
     const r = u.row; u.row = o.row; o.row = r; o.movePt = false; moved.push(o);
   } else {
     if (!canFlip(u)) return false;
+    if (u.row === 'back' && isExhausted(u)) return false;
     u.row = u.row === 'front' ? 'back' : 'front';
   }
   u.movePt = false;
@@ -346,7 +362,7 @@ function enemyAct(e) {
     for (const p of f) { if (e.ko) break; attackPlayer(e, p, e.dmg * GROUP_RATIO, mul); }
   } else if (act === 'swap') {
     const onlyFront = frontAlive().length === 1 ? frontAlive()[0] : null;
-    const cands = alivePlayers().filter(p => p !== onlyFront);
+    const cands = alivePlayers().filter(p => p !== onlyFront && !(p.row === 'back' && isExhausted(p)));
     if (!cands.length) { log(`${e.name} 換位失敗（沒有能換的人）。`, 'dim'); return; }
     const t = pick(cands);
     t.row = t.row === 'front' ? 'back' : 'front';
@@ -383,9 +399,14 @@ function checkAfterAction() {
   if (!alivePlayers().length) { B.over = 'lose'; log('— 全滅 —', 'bad'); return; }
   if (!frontAlive().length) B.waiting = { type: 'stepup' };
 }
+// 可以頂上的人：脫力中的不能上前排；只有全部都在脫力時才例外
+function stepUpCandidates() {
+  const ok = alivePlayers().filter(p => !isExhausted(p));
+  return ok.length ? ok : alivePlayers();
+}
 function stepUp(id) {
   const p = uById(id);
-  if (!p || p.ko) return false;
+  if (!p || p.ko || !stepUpCandidates().includes(p)) return false;
   p.row = 'front';
   B.waiting = null;
   log(`${p.name} 頂上前排！`, 'act');
