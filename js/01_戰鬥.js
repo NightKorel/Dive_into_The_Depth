@@ -243,6 +243,16 @@ const SKILLS = {
       u.row = 'front'; u.movePt = false;
       hit(u, t, 'charge_in');
     } },
+  hero_b2: { name: '主角後排 2', desc: '（名字待定）全體超小傷害，並打斷蓄力中的敵人（跳過牠下一記群攻）（每隻 ' + SKILL_DMG.hero_b2.join('~') + '）', target: 'none',
+    run(u) {
+      aliveEnemies().forEach(e => {
+        hit(u, e, 'hero_b2');
+        if (!e.ko && e.pattern.length && e.pattern[e.pi % e.pattern.length] === 'group') {
+          e.pi++;
+          log(`${e.name} 的蓄力被打斷了！`, 'good'); fx(e.id, '打斷', 'miss');
+        }
+      });
+    } },
   hold: { name: '不退', desc: '背水：到他下個回合，所有攻擊都衝著他來，每被打一次就反擊；第一擊致命傷留 1 血（反擊 ' + SKILL_DMG.hold_counter.join('~') + '）', target: 'none', bw: true,
     run(u) { addGlob('taunt', u.id, 1, { counter: true, lock: true }); log('主角：「想過去？先過我這關！」（佔位）', 'good'); } },
   // V

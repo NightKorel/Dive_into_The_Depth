@@ -29,6 +29,7 @@ const SKILL_DMG = {
   slash: [12, 14],       // 主角 劈斬
   charge_in: [18, 21],   // 主角 突襲
   hold_counter: [8, 9],  // 主角 不退的反擊
+  hero_b2: [3, 4],       // 主角後排 2（名字待定）：全體超小傷害（每隻）
   rend: [14, 16],        // V 割裂
   knives: [5, 6],        // V 飛刀（每把）
   bladedance: [16, 19],  // V 刀舞
@@ -44,7 +45,7 @@ const SKILL_DMG = {
 // front / back：前排兩招、後排兩招的技能 id；null＝這格還沒定
 const HERO_DATA = [
   { id: 'hero', name: '主角', color: '#ebcb8b', maxHp: 120, spd: 10, critEvery: CRIT_EVERY, row: 'front',
-    front: ['slash', 'taunt'], back: ['charge_in', null], emptyName: { back: '主角後排 2' }, bw: 'hold',
+    front: ['slash', 'taunt'], back: ['charge_in', 'hero_b2'], bw: 'hold',
     trait: '振作／硬撐：脫力時血量「加上」40%／20%' },
   { id: 'v', name: 'V', color: '#b48ead', maxHp: 90, spd: 14, critEvery: CRIT_EVERY, row: 'front',
     front: ['guard', 'rend'], back: ['knives', 'focus'], bw: 'bladedance',
