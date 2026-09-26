@@ -236,10 +236,11 @@ const SKILLS = {
   slash: { name: '劈斬', desc: '單傷' + dr('slash'), target: 'enemy', run(u, t) { hit(u, t, 'slash'); } },
   taunt: { name: '嘲諷', desc: '嘲諷全體敵人（單攻都打他），到他下個回合', target: 'none',
     run(u) { addGlob('taunt', u.id, 1); log('嘲諷：單攻都會打主角（到他下個回合）。', 'good'); } },
-  // 突襲：不花移動點、只衝空位（納可 2026-09-26）；回合開始就在後排才能用（防「先退後排再突襲」每回合刷高傷）
-  charge_in: { name: '突襲', desc: '衝進前排空位單傷，打完留在前排；不花移動點，回合開始就在後排才能用' + dr('charge_in'),
+  // 突襲：不花移動點、只衝空位；出招時人在後排就能用（納可 2026-09-26：可以先用移動點退後再突襲，
+  //       代價是移動點用掉、隊友沒法跟他對調；而且主角打帶跑會讓別人去坦，這是想鼓勵的）
+  charge_in: { name: '突襲', desc: '衝進前排空位單傷，打完留在前排；不花移動點' + dr('charge_in'),
     target: 'enemy',
-    usable(u) { return u.startBack && u.row === 'back'; },
+    usable(u) { return u.row === 'back'; },
     run(u, t) {
       u.row = 'front';
       hit(u, t, 'charge_in');
