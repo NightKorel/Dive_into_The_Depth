@@ -47,7 +47,7 @@ function setupBattle(cfg) {
     B.units.push({
       id: h.id, side: 'p', name: h.name, color: h.color, data: h,
       maxHp: h.maxHp, hp: h.maxHp, spd: h.spd, crit: h.crit, dodge: h.dodge, row: h.row,
-      ko: false, skipNext: false, exState: null, exFirst: false, bwUsed: false, exCount: 0, guard: false, charged: false,
+      ko: false, skipNext: false, mustRetreat: false, exState: null, exFirst: false, bwUsed: false, exCount: 0, guard: false, charged: false,
       hots: [], movePt: true, startBack: false,   // movePt：移動點，每次輪到自己時刷新
     });
   });
@@ -125,6 +125,14 @@ function startTurn(u) {
   if (u.side === 'e') return 'enemy';
   u.movePt = true;
   u.startBack = u.row === 'back';
+  if (u.mustRetreat) {
+    const o = forcedRetreatOptions(u);
+    if (u.row !== 'front') u.mustRetreat = false;
+    else if (!o.flip && !o.swaps.length) {
+      u.mustRetreat = false;
+      if (alivePlayers().some(p => p.row === 'back' && isExhausted(p))) collapseLine();
+    }
+  }
   return 'player';
 }
 const GLOB_NAMES = { taunt: '嘲諷', tailwind: '順風', dust: '揚塵' };
@@ -166,7 +174,7 @@ function exhaustRecover(u) {
   if (!isND(u)) u.bwUsed = false;
 }
 function knockOut(p) {
-  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.charged = false; p.skipNext = false; p.exState = null;
+  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.charged = false; p.skipNext = false; p.exState = null; p.mustRetreat = false;
   removeFromCycle(p.id);
   B.glob = B.glob.filter(g => g.owner !== p.id);
   log(`${p.name} 昏迷了！`, 'bad');
@@ -324,7 +332,7 @@ function useSkill(u, id, target, extra) {
   s.run(u, target, extra);
   if (B.chargeUsed) u.charged = false;
   B.forceCrit = false;
-  if (s.bw) u.bwUsed = true;
+  if (s.bw) { u.bwUsed = true; u.mustRetreat = true; }   // 用過背水，下次輪到必須撤退
   return true;
 }
 function useMed(u, kind, t) {
@@ -362,7 +370,7 @@ function enemyAct(e) {
     for (const p of f) { if (e.ko) break; attackPlayer(e, p, e.dmg * GROUP_RATIO, mul); }
   } else if (act === 'swap') {
     const onlyFront = frontAlive().length === 1 ? frontAlive()[0] : null;
-    const cands = alivePlayers().filter(p => p !== onlyFront && !(p.row === 'back' && isExhausted(p)));
+    const cands = alivePlayers().filter(p => p !== onlyFront && !isExhausted(p));   // 前排還有人時，脫力的人不可選中
     if (!cands.length) { log(`${e.name} 換位失敗（沒有能換的人）。`, 'dim'); return; }
     const t = pick(cands);
     t.row = t.row === 'front' ? 'back' : 'front';
@@ -370,7 +378,7 @@ function enemyAct(e) {
     fx(t.id, t.row === 'front' ? '被拖上前' : '被推回去', 'miss');
     if (t.row === 'back' && isND(t)) exhaust(t, false);
   } else if (act === 'push') {
-    const t = pick(alivePlayers());
+    const t = pick(alivePlayers().filter(p => !isExhausted(p)));
     if (!t) return;
     pushBack(t.id);
     log(`${e.name} 把 ${t.name} 的下一次行動往後一格。`, 'enemy');
@@ -397,13 +405,45 @@ function attackPlayer(e, p, base, mul) {
 function checkAfterAction() {
   if (!aliveEnemies().length) { B.over = 'win'; log('— 勝利！—', 'good'); return; }
   if (!alivePlayers().length) { B.over = 'lose'; log('— 全滅 —', 'bad'); return; }
-  if (!frontAlive().length) B.waiting = { type: 'stepup' };
+  if (!frontAlive().length) {
+    if (stepUpCandidates().length) B.waiting = { type: 'stepup' };
+    else collapseLine();
+  }
 }
-// 可以頂上的人：脫力中的不能上前排；只有全部都在脫力時才例外
-function stepUpCandidates() {
-  const ok = alivePlayers().filter(p => !isExhausted(p));
-  return ok.length ? ok : alivePlayers();
+// 戰線崩潰：前排空了、後排又全是脫力的人 → 所有人一起被逼上前排；
+// 脫力被打斷（不回血、維持瀕死），而且背水刷新可以再用。
+function collapseLine() {
+  log('沒有戰線了！所有人一起被逼上前排。', 'bad');
+  alivePlayers().forEach(p => {
+    p.row = 'front';
+    p.mustRetreat = false;
+    if (p.exState) { p.exState = null; p.bwUsed = false; log(`${p.name} 的脫力被打斷，背水可以再用。`, 'bw'); fx(p.id, '被打斷', 'bad'); }
+  });
 }
+// 背水後必須撤退：移到後排空位（前排還有別人時），或跟後排一個沒在脫力的人對調（強制，不看對方移動點，但會用掉）
+function forcedRetreatOptions(u) {
+  return {
+    flip: frontAlive().length > 1,
+    swaps: alivePlayers().filter(o => o.row === 'back' && !isExhausted(o)).map(o => o.id),
+  };
+}
+function doForcedRetreat(u, opt) {
+  if (!u.mustRetreat || u.row !== 'front') return false;
+  const o = forcedRetreatOptions(u);
+  if (opt.swap) {
+    if (!o.swaps.includes(opt.swap)) return false;
+    const p = uById(opt.swap); p.row = 'front'; p.movePt = false;
+    log(`${u.name} 撤退，${p.name} 頂上。`, 'act');
+  } else {
+    if (!o.flip) return false;
+    log(`${u.name} 撤到後排。`, 'act');
+  }
+  u.row = 'back'; u.movePt = false; u.mustRetreat = false;
+  if (isND(u)) { exhaust(u, true); return true; }
+  return false;
+}
+// 可以頂上的人：脫力中的不能上前排（全都在脫力＝戰線崩潰，見 collapseLine）
+function stepUpCandidates() { return alivePlayers().filter(p => !isExhausted(p)); }
 function stepUp(id) {
   const p = uById(id);
   if (!p || p.ko || !stepUpCandidates().includes(p)) return false;

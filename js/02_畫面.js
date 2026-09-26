@@ -139,6 +139,12 @@ window.addEventListener('error', e => showError(e.error || e.message));
 function myTurn() { return ui.screen === 'battle' && !busy && !B.over && !B.waiting && B.cur && B.cur.side === 'p'; }
 
 // ---- 玩家點擊 ----
+function clickForced(swapId) {
+  if (!myTurn()) return;
+  const selfEx = doForcedRetreat(B.cur, swapId ? { swap: swapId } : {});
+  if (selfEx) { endPlayerTurn(); return; }
+  render();
+}
 function clickMoveMenu() { if (!myTurn() || !B.cur.movePt) return; ui.pending = { type: 'move' }; render(); }
 function clickMove(opt) {
   if (!myTurn()) return;
@@ -207,6 +213,7 @@ function badges(u) {
   const b = [];
   if (u.ko) return '<span class="badge ko">昏迷</span>';
   if (isND(u)) b.push(`<span class="badge nd">瀕死${u.bwUsed ? '·背水已用' : ''}</span>`);
+  if (u.mustRetreat) b.push('<span class="badge warn">背水後要撤退</span>');
   if (u.exState) b.push(`<span class="badge ex">${u.id === 'hero' ? (u.exFirst ? '振作中' : '硬撐中') : '脫力'}</span>`);
   if (u.guard) b.push('<span class="badge">格擋</span>');
   if (u.charged) b.push('<span class="badge">蓄力</span>');
@@ -270,6 +277,13 @@ function renderActions() {
   if (!u || u.side !== 'p' || busy) return `<div class="prompt dim">${u ? esc(u.name) + ' 行動中……' : ''}</div>`;
   const side = u.row;
   let html = `<div class="act-head"><b style="color:${u.color}">${esc(u.name)}</b><span class="dim">・${side === 'front' ? '前排' : '後排'}</span><span class="trait">${esc(u.data.trait)}</span></div>`;
+  if (u.mustRetreat) {
+    const o = forcedRetreatOptions(u);
+    html += `<div class="prompt">背水之後撐不住了，必須撤退！${isND(u) ? '（瀕死撤到後排會脫力）' : ''}</div><div class="btn-row">`;
+    if (o.flip) html += `<button class="btn" onclick="clickForced(null)">撤到後排空位</button>`;
+    o.swaps.forEach(id => { html += `<button class="btn" onclick="clickForced('${id}')">跟 ${esc(uById(id).name)} 對調</button>`; });
+    return html + '</div>';
+  }
   if (ui.pending) {
     const p = ui.pending;
     if (p.type === 'target') html += `<div class="prompt">點一隻敵人（${esc(SKILLS[p.id].name)}）</div>`;

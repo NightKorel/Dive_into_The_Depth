@@ -13,7 +13,7 @@ vm.createContext(ctx);
 vm.runInContext(
   fs.readFileSync(path.join(JS, '00_資料.js'), 'utf8') + '\n' +
   fs.readFileSync(path.join(JS, '01_戰鬥.js'), 'utf8') +
-  '\n;this.__ = { B, setupBattle, advance, startTurn, enemyAct, checkAfterAction, stepUp, stepUpCandidates, isExhausted, alivePlayers, aliveEnemies, frontAlive, skillsFor, skillUsable, useSkill, doMove, canFlip, swapCandidates, useMed, SKILLS, DUMMY_PRESETS };',
+  '\n;this.__ = { B, setupBattle, advance, startTurn, enemyAct, checkAfterAction, stepUp, stepUpCandidates, isExhausted, forcedRetreatOptions, doForcedRetreat, alivePlayers, aliveEnemies, frontAlive, skillsFor, skillUsable, useSkill, doMove, canFlip, swapCandidates, useMed, SKILLS, DUMMY_PRESETS };',
   ctx);
 const G = ctx.__, B = G.B;
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -34,7 +34,14 @@ for (let n = 0; n < N; n++) {
     if (r === 'enemy') G.enemyAct(u);
     else if (r === 'player') {
       let ended = false;
-      if (Math.random() < 0.4) {
+      if (u.mustRetreat) {
+        const o = G.forcedRetreatOptions(u);
+        const opts = (o.flip ? [{}] : []).concat(o.swaps.map(id => ({ swap: id })));
+        if (!opts.length) throw new Error('必須撤退卻沒有選項');
+        ended = G.doForcedRetreat(u, pick(opts));
+        if (u.mustRetreat) throw new Error('撤退失敗');
+      }
+      if (!ended && Math.random() < 0.4) {
         const opts = [];
         if (G.canFlip(u)) opts.push({ flip: true });
         G.swapCandidates(u).forEach(o => opts.push({ swap: o.id }));
@@ -58,6 +65,7 @@ for (let n = 0; n < N; n++) {
       if (x.ko && B.cycle.includes(x.id)) throw new Error(`${x.name} 昏迷了卻還在順序條`);
       if (!x.ko && !B.cycle.includes(x.id)) throw new Error(`${x.name} 活著卻不在順序條`);
     }
+    if (!B.over && !B.waiting && G.frontAlive().some(p => G.isExhausted(p))) throw new Error('脫力的人在前排');
     if (new Set(B.cycle).size !== B.cycle.length) throw new Error('順序條有重複');
     if (!B.over && !B.waiting && G.alivePlayers().length && !G.frontAlive().length) throw new Error('前排沒人卻沒要求頂上');
   }
