@@ -208,7 +208,6 @@ function badges(u) {
   if (u.ko) return '<span class="badge ko">昏迷</span>';
   if (isND(u)) b.push(`<span class="badge nd">瀕死${u.bwUsed ? '·背水已用' : ''}</span>`);
   if (u.skipNext) b.push('<span class="badge ex">脫力</span>');
-  if (!u.movePt && B.cur !== u) b.push('<span class="badge dimb">移動點已用</span>');
   if (u.guard) b.push('<span class="badge">格擋</span>');
   if (u.charged) b.push('<span class="badge">蓄力</span>');
   if (u.hots.length) b.push(`<span class="badge heal">回春${u.hots.reduce((a, h) => a + h.left, 0)}</span>`);
@@ -249,7 +248,7 @@ function renderPartyRow(row) {
     const bd = badges(p);
     return `<div class="card ally ${p.ko ? 'dead' : ''} ${B.cur === p ? 'acting' : ''} ${pickable ? 'targetable' : ''}"
       data-id="${p.id}" style="--c:${p.color}" onclick="clickAlly('${p.id}')">
-      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
+      <div class="crow"><span class="cname" style="color:${p.color}">${esc(p.name)}${!p.ko && p.movePt ? '<span class="mv" title="還有移動點：可以換位、也可以被換">🔁</span>' : ''}</span><span class="hpnum">${p.hp}/${p.maxHp}</span></div>
       ${hpBar(p)}${bd ? `<div class="badges">${bd}</div>` : ''}
     </div>`;
   }).join('');
@@ -295,7 +294,7 @@ function renderActions() {
   const anyUsable = ids.some(id => id && skillUsable(u, id)) || B.med > 0;
   html += `<div class="skill-row ${ids.length === 1 ? 'bw-only' : ''}">${ids.map(id => skillBtn(u, id, side)).join('')}</div>`;
   html += `<div class="btn-row tools">
-    ${u.movePt ? '<button class="btn small" onclick="clickMoveMenu()">換位</button>' : '<span class="dim small">移動點已用</span>'}
+    ${u.movePt ? '<button class="btn small" onclick="clickMoveMenu()">換位</button>' : '<span class="dim small">🔁 已用</span>'}
     <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('aid')">急救</button>
     <button class="btn small" ${B.med > 0 ? '' : 'disabled'} onclick="clickMed('regen')">回春</button>
     <span class="dim small">醫療物 ${B.med}</span>
