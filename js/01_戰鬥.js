@@ -46,7 +46,7 @@ function setupBattle(cfg) {
   HERO_DATA.forEach(h => {
     B.units.push({
       id: h.id, side: 'p', name: h.name, color: h.color, data: h,
-      maxHp: h.maxHp, hp: h.maxHp, spd: h.spd, crit: h.crit, dodge: h.dodge, row: h.row,
+      maxHp: h.maxHp, hp: h.maxHp, spd: h.spd, critEvery: h.critEvery, critCount: 0, evade: false, prevRow: h.row, row: h.row,
       ko: false, skipNext: false, mustRetreat: false, exState: null, exFirst: false, bwUsed: false, exCount: 0, guard: false, charged: false,
       hots: [], movePt: true, startBack: false,   // movePt：移動點，每次輪到自己時刷新
     });
@@ -124,6 +124,7 @@ function startTurn(u) {
   }
   if (u.side === 'e') return 'enemy';
   u.movePt = true;
+  u.evade = false;
   u.startBack = u.row === 'back';
   if (u.mustRetreat) {
     const o = forcedRetreatOptions(u);
@@ -174,7 +175,7 @@ function exhaustRecover(u) {
   if (!isND(u)) u.bwUsed = false;
 }
 function knockOut(p) {
-  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.charged = false; p.skipNext = false; p.exState = null; p.mustRetreat = false;
+  p.hp = 0; p.ko = true; p.row = 'back'; p.hots = []; p.guard = false; p.charged = false; p.skipNext = false; p.exState = null; p.mustRetreat = false; p.evade = false;
   removeFromCycle(p.id);
   B.glob = B.glob.filter(g => g.owner !== p.id);
   log(`${p.name} 昏迷了！`, 'bad');
@@ -200,16 +201,18 @@ function damagePlayer(p, d, src) {
 }
 
 // ---- 我方打敵人 ----
-// opt.crit：這招自己的爆擊率（沒給就用角色的）
+// 爆擊：①計數：每打第 N 下必爆（一般 5、L 3），爆了就重新計數；②這招自己的爆擊率（opt.crit，如飛刀、刀舞）＋順風，是額外的機率；③蓄力必爆。
 function hit(u, e, base, opt) {
   if (!e || e.ko) return null;
   opt = opt || {};
   // base 可以是技能 id（查 SKILL_DMG 範圍、隨機取整數）或直接給數字
   let d = typeof base === 'string' ? randInt(SKILL_DMG[base][0], SKILL_DMG[base][1]) : base;
   d *= dmgMul();
-  let rate = opt.crit != null ? Math.max(opt.crit, u.crit) : u.crit;
+  let rate = opt.crit || 0;
   if (getGlob('tailwind')) rate += TAILWIND_CRIT;
-  const crit = B.forceCrit || rnd() < rate;
+  u.critCount++;
+  const crit = B.forceCrit || u.critCount >= u.critEvery || (rate > 0 && rnd() < rate);
+  if (crit) u.critCount = 0;
   if (B.forceCrit) B.chargeUsed = true;
   if (crit) d *= CRIT_MUL;
   d = Math.floor(d);
@@ -359,7 +362,7 @@ function enemyAct(e) {
     let t = null;
     const tg = getGlob('taunt');
     if (tg) { const h = uById(tg.owner); if (h && !h.ko) t = h; }
-    if (!t) { const f = frontAlive(); if (f.length) t = pick(f); }
+    if (!t) { const f = frontAlive(); if (f.length) t = f.reduce((a, b) => (b.hp < a.hp ? b : a)); }   // 沒嘲諷就打前排血最少的
     if (!t) return;
     log(`${e.name} 攻擊 ${t.name}。`, 'enemy');
     attackPlayer(e, t, e.dmg, 1);
@@ -388,7 +391,7 @@ function enemyAct(e) {
 function attackPlayer(e, p, base, mul) {
   if (p.ko) return;
   if (getGlob('dust') && rnd() < DUST_MISS) { log(`${e.name} 失手（揚塵）。`, 'good'); fx(p.id, 'MISS', 'miss'); return; }
-  if (p.dodge && rnd() < p.dodge) { log(`${p.name} 閃避（靈巧）。`, 'good'); fx(p.id, '閃避', 'miss'); return; }
+  if (p.evade) { p.evade = false; log(`${p.name} 閃開了（靈巧）。`, 'good'); fx(p.id, '閃避', 'miss'); return; }
   let d = base * mul * (1 - ENEMY_SWING + rnd() * ENEMY_SWING * 2) * dmgMul();
   d = Math.max(1, Math.floor(d));
   if (p.guard) { d = Math.floor(d * 0.5); p.guard = false; log(`${p.name} 格擋，傷害減半。`, 'good'); }
@@ -402,7 +405,18 @@ function attackPlayer(e, p, base, mul) {
 
 // ---- 狀態檢查 ----
 // 前排空了（還有人活著）→ 等玩家選誰頂上
+// 位置變動後同步：V 從後排進前排 → 靈巧待命（到他下次輪到前，第一次被打閃掉）；回後排就取消
+function syncRows() {
+  players().forEach(p => {
+    if (p.id === 'v') {
+      if (p.prevRow === 'back' && p.row === 'front' && !p.ko) p.evade = true;
+      if (p.row !== 'front') p.evade = false;
+    }
+    p.prevRow = p.row;
+  });
+}
 function checkAfterAction() {
+  syncRows();
   if (!aliveEnemies().length) { B.over = 'win'; log('— 勝利！—', 'good'); return; }
   if (!alivePlayers().length) { B.over = 'lose'; log('— 全滅 —', 'bad'); return; }
   if (!frontAlive().length) {
@@ -419,6 +433,7 @@ function collapseLine() {
     p.mustRetreat = false;
     if (p.exState) { p.exState = null; p.bwUsed = false; log(`${p.name} 的脫力被打斷，背水可以再用。`, 'bw'); fx(p.id, '被打斷', 'bad'); }
   });
+  syncRows();
 }
 // 背水後必須撤退：移到後排空位（前排還有別人時），或跟後排一個沒在脫力的人對調（強制，不看對方移動點，但會用掉）
 function forcedRetreatOptions(u) {
@@ -449,6 +464,7 @@ function stepUp(id) {
   if (!p || p.ko || !stepUpCandidates().includes(p)) return false;
   p.row = 'front';
   B.waiting = null;
+  syncRows();
   log(`${p.name} 頂上前排！`, 'act');
   return true;
 }
